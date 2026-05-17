@@ -2,7 +2,7 @@
 
 out vec4 FragColor;
 
-uniform vec3 uColor; // цвет блока или объекта
+uniform vec3 uColor;
 
 void main()
 {

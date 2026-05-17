@@ -3,7 +3,7 @@ use std::{fs::File, io::Read};
 use std::ffi::CString;
 use crate::loger::ProjectErrors;
 use std::ffi::CStr;
-
+use glam::Mat4;
 
 pub struct Shader{
     id: GLuint,
@@ -18,6 +18,15 @@ impl Shader {
 
     pub fn use_shader(&self) {
         unsafe { gl::UseProgram(self.id); }
+    }
+
+
+    pub fn uniform_matrix(&self, name: &str, matrix: Mat4){
+        unsafe {
+            let c_name = CString::new(name).expect("CString::new failed");
+            let transform_loc = gl::GetUniformLocation(self.id, c_name.as_ptr());
+            gl::UniformMatrix4fv(transform_loc, 1, gl::FALSE, matrix.as_ref().as_ptr());
+        }
     }
 }
 

@@ -12,7 +12,9 @@ use glfw::{fail_on_errors, Glfw, GlfwReceiver, PWindow, WindowEvent};
 pub struct Window {
     pub glfw: Glfw,
     pub window: PWindow,
-    pub receiver: GlfwReceiver<(f64, WindowEvent)>
+    pub receiver: GlfwReceiver<(f64, WindowEvent)>,
+    pub width: u32,
+    pub height: u32
 }
 
 
@@ -49,6 +51,8 @@ impl Window {
         glfw,
         window,
         receiver: events,
+        width,
+        height
         })
     }
     
@@ -114,5 +118,11 @@ impl Window {
     /// отслеживание изменения размера окна
     pub fn set_size_polling(&mut self, choice: bool) {
         self.window.set_size_polling(choice);
+    }
+
+
+    /// закрыть окно
+    pub fn close(&mut self){
+        self.window.set_should_close(true);
     }
 }

@@ -1,106 +1,67 @@
-use core::Window;
-use core::Events;
-use glfw::Key;
+use core::{Window, Events, Camera};
+use std::time::Instant;
+use glam::{Vec3, Mat4};
+use glfw::Key::*;
 use glfw::MouseButton;
 use crate::constant::*;
 use crate::loger::ProjectErrors;
 use glfw::CursorMode;
 use graphics::load_shader;
+use graphics::create_mesh_cube;
 
 use gl::types::*;
 
-
+mod voxels;
 mod constant;
 mod loger;
 mod core;
 mod graphics;
 
 
-fn create_triangle() -> GLuint {
-    let vertices: [f32; 9] = [
-        -0.5, -0.5, 0.0,
-         0.5, -0.5, 0.0,
-         0.0,  0.5, 0.0,
-    ];
-
-    let (mut vao, mut vbo) = (0, 0);
-    unsafe {
-        gl::GenVertexArrays(1, &mut vao);
-        gl::GenBuffers(1, &mut vbo);
-
-        gl::BindVertexArray(vao);
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-        gl::BufferData(
-            gl::ARRAY_BUFFER,
-            (vertices.len() * std::mem::size_of::<f32>()) as GLsizeiptr,
-            vertices.as_ptr() as *const _,
-            gl::STATIC_DRAW,
-        );
-        gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, 3 * std::mem::size_of::<f32>() as GLsizei, std::ptr::null());
-        gl::EnableVertexAttribArray(0);
-
-        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
-        gl::BindVertexArray(0);
-    }
-    vao
-}
-
-
 fn main() -> Result<(), ProjectErrors> {
     println!("инициализация окна");
-    let mut window = match Window::init("Voxel Craft", 1920, 1080) {
-        Ok(window) => window,
+    let mut window = Window::init("Voxel Craft", 1920, 1080)?;
 
-        // слом glfw
-        Err(ProjectErrors::GlfwInitError(error)) => {
-            eprintln!("FATAL ERROR: Ошибка инициализации glfw {error}");
-            std::process::exit(1)
-        },
-
-        // ошибка инициализации окна 
-        Err(ProjectErrors::WindowCreateError(error)) => {
-            eprintln!("WINDOW ERROR: Ошибка инициализации окна. {error} Запуск повторной инициализации");
-            match Window::init("title", 1920, 1080) {
-                // Успех
-                Ok(window) => {
-                    println!("INFO: Повторная инициализация успешна");
-                    window
-                },
-                
-                // аааааа ошибка
-                Err(e) => {
-                    eprint!("FATAL ERROR: {e}");
-                    std::process::exit(1)
-                }
-            }
-        },
-
-        // другая ошибка 
-        _ => panic!("FATAL ERROR: неизвестная ошибка")
-    };
-
+    window.glfw.set_swap_interval(glfw::SwapInterval::Sync(1));
 
     println!("Инициализация обработчика событий");
     let mut events = Events::init();
     events.setting(&mut window);
     println!("Инициализация обработчика событий завершена");
 
+    println!("инициализация камеры");
+    let mut camera = Camera::init(Vec3::new(0.0, 0.0, 3.0), 70.0_f32.to_radians());
+    println!("инициализация камеры: ок");
+
+    events.switch_cursor_mode(&mut window);
+
     println!("создание базовой шейдерной программы");
     let shader = load_shader("res/shaders/vertex_shader.glsl", "res/shaders/fragment_shader.glsl")?;
     println!("создание базовой шейдерной программы завершено");
 
-    println!("отрисовка треугольника");
-    let triangle_vao = create_triangle();
-    println!("Треугольник нарисован");
+    println!("отрисовка куба");
+    let (_vao, cube_index_count) = create_mesh_cube();
+    println!("куб нарисован");
 
     unsafe {
         gl::Enable(gl::DEPTH_TEST);
         gl::ClearColor(1.0,1.0, 1.0, 0.4);
+        //gl::Enable(gl::CULL_FACE);
     }
 
+    const MOUSE_SENSITIVITY: f32 = 0.001;
+
+    let mut last_frame = Instant::now();
 
     println!("Start main loop");
     while window.is_open() {
+        let now = Instant::now();
+        let delta_time = (now - last_frame).as_secs_f32();
+        last_frame = now;
+        let delta_time = delta_time.min(0.05);
+
+        println!("дельта {delta_time}");
+
         // прослушивание всех устройств и обработка событий 
         events.pull_events(&mut window);
 
@@ -109,9 +70,57 @@ fn main() -> Result<(), ProjectErrors> {
             window.gl_clear_color(0.3, 0.4, 0.5, 0.6);
         } else if events.j_pressed(TAB) && events.cursor_in_window {
             events.switch_cursor_mode(&mut window);
+        }else if events.j_pressed(Escape as i32) {
+            window.close();
+            
         }
 
         // игровая логика
+        let mut direction = Vec3::ZERO;
+
+        println!("front: {:?}, right: {:?}", camera.front, camera.right);
+
+
+        let pitch_delta = events.delta_y * MOUSE_SENSITIVITY;
+        let yaw_delta = events.delta_x * MOUSE_SENSITIVITY;
+
+        if events.cursor_locked {
+            camera.rotate(-pitch_delta, yaw_delta, 0.0);
+        }
+        if events.pressed(W as i32) {
+            direction += camera.front;
+            println!("W нажата");
+            println!("W pressed, direction = {:?}", direction);
+        }
+        if events.pressed(constant::S) {
+            direction -= camera.front; // назад
+            println!("S нажата");
+            println!("S pressed, direction = {:?}", direction);
+        }
+        if events.pressed(constant::A) {
+            println!("A нажата");
+            direction -= camera.right; // влево
+            println!("A pressed, direction = {:?}", direction);
+        }
+        if events.pressed(constant::D) {
+            direction += camera.right; // вправо
+            println!("D нажата");
+            println!("D pressed, direction = {:?}", direction);
+        }
+        if events.pressed(constant::SPACE) {
+            direction += Vec3::Y; // вверх (мировая ось)
+        }
+        if events.pressed(constant::LEFT_SHIFT) {
+            direction -= Vec3::Y; // вниз
+        }
+
+        //println!("final direction: {:?}", direction);
+
+        if direction.length_squared() > 0.0 {
+            direction = direction.normalize();
+            camera.position += direction * MOVE_SPEED * delta_time;
+        }
+
 
         // очистка буфера 
         window.gl_clear();
@@ -119,9 +128,18 @@ fn main() -> Result<(), ProjectErrors> {
         // рендер нового кадра
         shader.use_shader();
 
+        let view = camera.get_view();
+        let projection = camera.get_projection(window.width as f32, window.height as f32);
+        let model = Mat4::IDENTITY; // или переместите треугольник, если нужно
+
+        shader.uniform_matrix("uModel", model);
+        shader.uniform_matrix("uView", view);
+        shader.uniform_matrix("uProjection", projection);
+
+
         unsafe {
-            gl::BindVertexArray(triangle_vao);
-            gl::DrawArrays(gl::TRIANGLES, 0, 3);
+            gl::BindVertexArray(_vao);
+            gl::DrawElements(gl::TRIANGLES, cube_index_count as i32, gl::UNSIGNED_INT, std::ptr::null());
             gl::BindVertexArray(0);
         }
 
