@@ -1,0 +1,9 @@
+[package]
+name = "Voxel_Craft_New"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+glfw = "0.62.0"
+gl = "*"
+thiserror = "2.0.18"
