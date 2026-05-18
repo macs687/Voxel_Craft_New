@@ -125,4 +125,14 @@ impl Window {
     pub fn close(&mut self){
         self.window.set_should_close(true);
     }
+
+
+    /// стартовые настройки OpenGL
+    pub fn setting_openGL(&mut self) {
+        unsafe {
+            gl::Enable(gl::DEPTH_TEST);
+            gl::ClearColor(1.0,1.0, 1.0, 0.4);
+            //gl::Enable(gl::CULL_FACE);
+        }
+    }
 }
