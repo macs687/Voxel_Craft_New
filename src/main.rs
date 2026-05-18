@@ -8,6 +8,8 @@ use crate::loger::ProjectErrors;
 use glfw::CursorMode;
 use graphics::load_shader;
 use graphics::create_mesh_cube;
+use graphics::load_texture_from_png;
+
 
 use gl::types::*;
 
@@ -21,7 +23,6 @@ mod graphics;
 fn main() -> Result<(), ProjectErrors> {
     println!("инициализация окна");
     let mut window = Window::init("Voxel Craft", 1920, 1080)?;
-
     window.glfw.set_swap_interval(glfw::SwapInterval::Sync(1));
 
     println!("Инициализация обработчика событий");
@@ -38,6 +39,12 @@ fn main() -> Result<(), ProjectErrors> {
     println!("создание базовой шейдерной программы");
     let shader = load_shader("res/shaders/vertex_shader.glsl", "res/shaders/fragment_shader.glsl")?;
     println!("создание базовой шейдерной программы завершено");
+
+    println!("загрузка текстуры");
+    let mut texture = load_texture_from_png("res/textures/planks.jpg")?;
+    println!("загрузка текстуры: ок");
+
+
 
     println!("отрисовка куба");
     let (_vao, cube_index_count) = create_mesh_cube();
@@ -135,6 +142,10 @@ fn main() -> Result<(), ProjectErrors> {
         shader.uniform_matrix("uModel", model);
         shader.uniform_matrix("uView", view);
         shader.uniform_matrix("uProjection", projection);
+        
+        texture.bind(0);
+        shader.uniform_texture("uTexture", 0);
+
 
 
         unsafe {

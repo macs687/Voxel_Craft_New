@@ -5,6 +5,7 @@ use crate::loger::ProjectErrors;
 use std::ffi::CStr;
 use glam::Mat4;
 
+
 pub struct Shader{
     id: GLuint,
 }
@@ -21,11 +22,22 @@ impl Shader {
     }
 
 
-    pub fn uniform_matrix(&self, name: &str, matrix: Mat4){
+    pub fn uniform_matrix(&self, name: &str, matrix: Mat4) {
         unsafe {
             let c_name = CString::new(name).expect("CString::new failed");
             let transform_loc = gl::GetUniformLocation(self.id, c_name.as_ptr());
             gl::UniformMatrix4fv(transform_loc, 1, gl::FALSE, matrix.as_ref().as_ptr());
+        }
+    }
+
+
+    pub fn uniform_texture(&self, name: &str, slot: i32) {
+        unsafe {
+            let c_name = code_to_cstring(name.to_string(), "uniform_texture").expect("ошибка конвертации в С строку");
+            let location = gl::GetUniformLocation(self.id, c_name.as_ptr());
+            if location != -1 {
+                gl::Uniform1i(location, slot);
+            }
         }
     }
 }

@@ -4,3 +4,4 @@ mod texture;
 
 pub use shader::load_shader;
 pub use mesh::create_mesh_cube;
+pub use texture::load_texture_from_png;

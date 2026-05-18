@@ -43,6 +43,13 @@ pub enum ProjectErrors {
     ShaderLinking {
         log: String,
     },
+
+    #[error("Ошибка загрузки текстуры '{path}': {source}")]
+    TextureLoadError {
+        path: String,
+        #[source]
+        source: image::ImageError,
+    },
 }
 
 
