@@ -10,11 +10,14 @@ use graphics::load_shader;
 use graphics::VoxelRenderer;
 use graphics::load_texture_from_png;
 use settings::{MOUSE_SENSITIVITY};
-
+use world::draw_world;
 use gl::types::*;
 use voxels::Chunk;
+use graphics::create_crosshair_mesh;
+use graphics::create_wireframe_mesh;
+use crate::world::{raycast, RayHit};
 
-
+mod world;
 mod voxels;
 mod constant;
 mod loger;
@@ -35,14 +38,18 @@ fn main() -> Result<(), ProjectErrors> {
     println!("Инициализация обработчика событий завершена");
 
     println!("инициализация камеры");
-    let mut camera = Camera::init(Vec3::new(0.0, 0.0, 3.0), 70.0_f32.to_radians());
+    let mut camera = Camera::init(Vec3::new(0.0, 0.0, -10.0), 40.0_f32.to_radians());
     println!("инициализация камеры: ок");
 
     events.switch_cursor_mode(&mut window);
 
     println!("создание базовой шейдерной программы");
     let shader = load_shader("res/shaders/vertex_shader.glsl", "res/shaders/fragment_shader.glsl")?;
+    let crosshair_shader = load_shader("res/shaders/crosshair_vertex.glsl", "res/shaders/crosshair_fragment.glsl")?;
+    let line_shader = load_shader("res/shaders/line_vertex.glsl", "res/shaders/line_fragment.glsl")?;
     println!("создание базовой шейдерной программы завершено");
+
+
 
     println!("загрузка текстуры");
     let mut texture = load_texture_from_png("res/textures/planks.jpg")?;
@@ -60,9 +67,11 @@ fn main() -> Result<(), ProjectErrors> {
     println!("Создание чанка: ок");
 
     println!("генерация мира");
-    let mesh = renderer.render(&chunk);
+    let mut mesh = renderer.render(&chunk);
     println!("генерация мира завершена");
     
+    let crosshair_mesh = create_crosshair_mesh();
+    let cube_mesh = create_wireframe_mesh();
 
     // НАСТРОЙКИ
     window.setting_openGL();
@@ -92,9 +101,6 @@ fn main() -> Result<(), ProjectErrors> {
         // игровая логика
         let mut direction = Vec3::ZERO;
 
-        //println!("front: {:?}, right: {:?}", camera.front, camera.right);
-
-
         let pitch_delta = events.delta_y * MOUSE_SENSITIVITY;
         let yaw_delta = -events.delta_x * MOUSE_SENSITIVITY;
 
@@ -102,25 +108,40 @@ fn main() -> Result<(), ProjectErrors> {
             camera.rotate(-pitch_delta, yaw_delta, 0.0);
         }
 
+
+
+        //println!("front: {:?}, right: {:?}", camera.front, camera.right);
+        let hit = raycast(&chunk, camera.position, camera.front, 8.0);
+
+        if let Some(ref hit ) = hit {
+            //let hitbox = Some(hit).unwrap();
+
+            if events.j_clicked(LCM) {
+                chunk.set_block(hit.block_pos.0 as usize, hit.block_pos.1 as usize, hit.block_pos.2 as usize, voxels::BlockType::Air);
+                mesh = renderer.render(&chunk);
+            }
+        }
+
+
         if events.pressed(KEY_W) {
             direction += camera.front;
-            println!("W нажата");
-            println!("W pressed, direction = {:?}", direction);
+            // println!("W нажата");
+            // println!("W pressed, direction = {:?}", direction);
         }
         if events.pressed(KEY_S) {
             direction -= camera.front; // назад
-            println!("S нажата");
-            println!("S pressed, direction = {:?}", direction);
+            // println!("S нажата");
+            // println!("S pressed, direction = {:?}", direction);
         }
         if events.pressed(KEY_A) {
-            println!("A нажата");
+            // println!("A нажата");
             direction -= camera.right; // влево
-            println!("A pressed, direction = {:?}", direction);
+            // println!("A pressed, direction = {:?}", direction);
         }
         if events.pressed(KEY_D) {
             direction += camera.right; // вправо
-            println!("D нажата");
-            println!("D pressed, direction = {:?}", direction);
+                // println!("D нажата");
+                // println!("D pressed, direction = {:?}", direction);
         }
         if events.pressed(KEY_SPACE) {
             direction += Vec3::Y; // вверх (мировая ось)
@@ -137,33 +158,8 @@ fn main() -> Result<(), ProjectErrors> {
         }
 
 
-        // очистка буфера 
-        window.gl_clear();
-
-        // рендер нового кадра
-        shader.use_shader();
-
-        let view = camera.get_view();
-        let projection = camera.get_projection(window.width as f32, window.height as f32);
-        let model = Mat4::IDENTITY; // или переместите треугольник, если нужно
-
-        shader.uniform_matrix("uModel", model);
-        shader.uniform_matrix("uView", view);
-        shader.uniform_matrix("uProjection", projection);
-        
-        texture.bind(0);
-        shader.uniform_texture("uTexture", 0);
-
-
-
-        unsafe {
-            gl::BindVertexArray(mesh.vao);
-            gl::DrawArrays(gl::TRIANGLES, 0, mesh.vertex_count as i32);
-            gl::BindVertexArray(0);
-        }
-
-        // отрисовка
-        window.swap_buffers();
+        // РЕНДЕР МИРА
+        draw_world(&mut window, &shader, &camera, &texture, &mesh, &crosshair_shader, &crosshair_mesh, &mut chunk, &line_shader, &cube_mesh, &events, &hit);
     }
 
     println!("Hello, world!");

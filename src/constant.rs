@@ -1,8 +1,11 @@
 use glfw::Key;
-use glfw::MouseButtonLeft;
+use glfw::{MouseButtonLeft, MouseButtonRight};
 
 /// Левая кнопка мыши
 pub const LCM: i32 = MouseButtonLeft as i32;
+
+/// правая кнопка мыши
+pub const PCM: i32 = MouseButtonRight as i32;
 
 pub const KEY_TAB: i32 = Key::Tab as i32;
 

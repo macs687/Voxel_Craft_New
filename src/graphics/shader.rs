@@ -40,6 +40,28 @@ impl Shader {
             }
         }
     }
+
+
+    pub fn uniform_color(&self, name: &str, r: f32, g: f32, b: f32, a: f32) {
+        unsafe {
+            let c_name = std::ffi::CString::new(name).unwrap();
+            let location = gl::GetUniformLocation(self.id, c_name.as_ptr());
+            if location != -1 {
+                gl::Uniform4f(location, r, g, b, a);
+            }
+        }
+    }
+
+
+    pub fn uniform_vec4(&self, name: &str, x: f32, y: f32, z: f32, w: f32) {
+        unsafe {
+            let c_name = std::ffi::CString::new(name).unwrap();
+            let location = gl::GetUniformLocation(self.id, c_name.as_ptr());
+            if location != -1 {
+                gl::Uniform4f(location, x, y, z, w);
+            }
+        }
+    }
 }
 
 
