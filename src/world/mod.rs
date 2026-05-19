@@ -4,6 +4,12 @@ use crate::voxels::Chunk;
 pub use draw_world::draw_world;
 use crate::settings::*;
 use crate::voxels::BlockType;
+pub use world::World;
+pub use world::ChunkCoord;
+pub use world::raycast;
+pub use world::rebuild_affected_meshes;
+
+mod world;
 
 #[derive(Debug, Clone, Copy)]
 pub struct RayHit {
@@ -11,7 +17,7 @@ pub struct RayHit {
     pub normal: (i32, i32, i32),    // нормаль грани, в которую попал луч
 }
 
-pub fn raycast(chunk: &Chunk, origin: glam::Vec3, direction: glam::Vec3, max_dist: f32) -> Option<RayHit> {
+pub fn old_raycast(chunk: &Chunk, origin: glam::Vec3, direction: glam::Vec3, max_dist: f32) -> Option<RayHit> {
     // Переводим в координаты блоков (float)
     let mut t = 0.0;
     let step = 0.01; // маленький шаг для простоты (не самый быстрый, но надёжный)

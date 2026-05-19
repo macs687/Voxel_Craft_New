@@ -1,21 +1,22 @@
 use core::{Window, Events, Camera};
+use std::collections::HashMap;
 use std::time::Instant;
-use glam::{Vec3, Mat4};
+use glam::Vec3;
 use glfw::Key::*;
-use glfw::MouseButton;
 use crate::constant::*;
 use crate::loger::ProjectErrors;
-use glfw::CursorMode;
 use graphics::load_shader;
 use graphics::VoxelRenderer;
 use graphics::load_texture_from_png;
 use settings::{MOUSE_SENSITIVITY};
 use world::draw_world;
-use gl::types::*;
-use voxels::Chunk;
 use graphics::create_crosshair_mesh;
 use graphics::create_wireframe_mesh;
-use crate::world::{raycast, RayHit};
+use world::raycast;
+use world::World;
+use world::ChunkCoord;
+use graphics::Mesh;
+use crate::world::rebuild_affected_meshes;
 
 mod world;
 mod voxels;
@@ -49,8 +50,6 @@ fn main() -> Result<(), ProjectErrors> {
     let line_shader = load_shader("res/shaders/line_vertex.glsl", "res/shaders/line_fragment.glsl")?;
     println!("создание базовой шейдерной программы завершено");
 
-
-
     println!("загрузка текстуры");
     let mut texture = load_texture_from_png("res/textures/planks.jpg")?;
     println!("загрузка текстуры: ок");
@@ -61,14 +60,25 @@ fn main() -> Result<(), ProjectErrors> {
     let mut renderer = VoxelRenderer::init();
     println!("инициализация рендер движка: ок");
 
-    println!("Создание чанка");
-    let mut chunk = Chunk::new();
-    chunk.generate_test_terrain();
-    println!("Создание чанка: ок");
+    println!("Создание мира");
+    let mut world = World::init();
+    world.generate_start_landscape();
 
-    println!("генерация мира");
-    let mut mesh = renderer.render(&chunk);
-    println!("генерация мира завершена");
+    let len = world.chunks.len();
+
+    println!("{len}");
+    println!("Создание мира: ок");
+
+    let mut chunk_meshes: HashMap<ChunkCoord, Mesh> = HashMap::new();
+    for (&(cx, cy, cz), chunk) in &world.chunks {
+        let mesh = renderer.render(chunk, cx, cy, cz, &world);
+        chunk_meshes.insert((cx, cy, cz), Mesh {
+            vao: mesh.vao,
+            vbo: mesh.vbo,
+            vertex_count: mesh.vertex_count
+        });
+    }
+
     
     let crosshair_mesh = create_crosshair_mesh();
     let cube_mesh = create_wireframe_mesh();
@@ -90,7 +100,7 @@ fn main() -> Result<(), ProjectErrors> {
         events.pull_events(&mut window);
 
         if events.j_clicked(LCM) {
-            println!("ЛКМ нажата");
+            //println!("ЛКМ нажата");
             window.gl_clear_color(0.3, 0.4, 0.5, 0.6);
         } else if events.j_pressed(KEY_TAB) && events.cursor_in_window {
             events.switch_cursor_mode(&mut window);
@@ -111,14 +121,19 @@ fn main() -> Result<(), ProjectErrors> {
 
 
         //println!("front: {:?}, right: {:?}", camera.front, camera.right);
-        let hit = raycast(&chunk, camera.position, camera.front, 8.0);
+        let hit = raycast(&world, camera.position, camera.front, 8.0);
 
         if let Some(ref hit ) = hit {
             //let hitbox = Some(hit).unwrap();
 
             if events.j_clicked(LCM) {
-                chunk.set_block(hit.block_pos.0 as usize, hit.block_pos.1 as usize, hit.block_pos.2 as usize, voxels::BlockType::Air);
-                mesh = renderer.render(&chunk);
+                world.set_block(hit.block_pos.0 as i32, hit.block_pos.1 as i32, hit.block_pos.2 as i32, voxels::BlockType::Air);
+                rebuild_affected_meshes(&mut world, &mut chunk_meshes, hit.block_pos, &mut renderer);
+            }
+
+            if events.j_clicked(PCM) {
+                world.set_block(hit.block_pos.0 as i32, hit.block_pos.1 as i32, hit.block_pos.2 as i32, voxels::BlockType::Planks);
+                rebuild_affected_meshes(&mut world, &mut chunk_meshes, hit.block_pos, &mut renderer);
             }
         }
 
@@ -159,7 +174,7 @@ fn main() -> Result<(), ProjectErrors> {
 
 
         // РЕНДЕР МИРА
-        draw_world(&mut window, &shader, &camera, &texture, &mesh, &crosshair_shader, &crosshair_mesh, &mut chunk, &line_shader, &cube_mesh, &events, &hit);
+        draw_world(&mut window, &shader, &camera, &texture, &chunk_meshes, &crosshair_shader, &crosshair_mesh, &line_shader, &cube_mesh, &hit);
     }
 
     println!("Hello, world!");

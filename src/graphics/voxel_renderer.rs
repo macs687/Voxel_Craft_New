@@ -1,4 +1,4 @@
-use crate::{graphics::mesh::Mesh, settings::CHUNK_SIZE, voxels::{BlockType, Chunk}};
+use crate::{graphics::mesh::Mesh, settings::CHUNK_SIZE, voxels::{BlockType, Chunk}, world::World};
 
 pub struct VoxelRenderer {
     buffer: Vec<f32>
@@ -11,7 +11,7 @@ impl VoxelRenderer {
     }
     
 
-    pub fn render(&mut self, chunk: &Chunk) -> Mesh {
+    pub fn render(&mut self, chunk: &Chunk, chunk_x: i32, chunk_y: i32, chunk_z: i32, world: &World) -> Mesh {
         for y in 0..CHUNK_SIZE {
             for z in 0..CHUNK_SIZE {
                 for x in 0..CHUNK_SIZE {
@@ -20,6 +20,10 @@ impl VoxelRenderer {
                     if block == BlockType::Air {
                         continue;
                     }
+
+                    let gx = chunk_x * CHUNK_SIZE as i32 + x as i32;
+                    let gy = chunk_y * CHUNK_SIZE as i32 + y as i32;
+                    let gz = chunk_z * CHUNK_SIZE as i32 + z as i32;
 
                     let cx = x as f32;
                     let cy = y as f32;
@@ -36,15 +40,12 @@ impl VoxelRenderer {
                     ];
 
                     for &(dx, dy, dz) in &faces {
-                        let nx = x as isize + dx as isize;
-                        let ny = y as isize + dy as isize;
-                        let nz = z as isize + dz as isize;
+                        let ngx = gx as isize + dx as isize;
+                        let ngy = gy as isize + dy as isize;
+                        let ngz = gz as isize + dz as isize;
 
-                        let visible = if nx < 0 || ny < 0 || nz < 0 || nx >= CHUNK_SIZE as isize || ny >= CHUNK_SIZE as isize || nz >= CHUNK_SIZE as isize {
-                            true
-                        } else {
-                            chunk.blocks[ny as usize][nz as usize][nx as usize] == BlockType::Air
-                        };
+                        let neighbor = world.get_block(ngx as i32, ngy as i32, ngz as i32);
+                        let visible = neighbor.map_or(true, |b| b == BlockType::Air);
                         
                         if visible {
                             add_face(&mut self.buffer, cx, cy, cz, s, (dx, dy, dz));

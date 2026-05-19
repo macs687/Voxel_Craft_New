@@ -1,32 +1,44 @@
+use std::collections::HashMap;
+
+use crate::settings::CHUNK_SIZE;
 use crate::core::{Camera, Events, Window};
 use crate::graphics::{Mesh, Shader, Texture, VoxelRenderer};
 use crate::voxels::Chunk;
-use crate::world::RayHit;
+use crate::world::{ChunkCoord, RayHit};
 use glam::{Mat4, Vec3};
 use crate::constant::{self, *};
 use crate::voxels::BlockType;
 
-pub fn draw_world(window: &mut Window, shader: &Shader, camera: &Camera, texture: &Texture, mesh: &Mesh, crosshair_shader: &Shader, crosshair_mesh: &Mesh, chunk: &mut Chunk, line_shader: &Shader, cube_mesh: &Mesh, events: &Events, hit: &Option<RayHit>) {
+pub fn draw_world(window: &mut Window, shader: &Shader, camera: &Camera, texture: &Texture, chunk_meshes: &HashMap<ChunkCoord, Mesh>, crosshair_shader: &Shader, crosshair_mesh: &Mesh, line_shader: &Shader, cube_mesh: &Mesh, hit: &Option<RayHit>) {
     window.gl_clear();
-
-    shader.use_shader();
-
+    
     let view = camera.get_view();
     let projection = camera.get_projection(window.width as f32, window.height as f32);
-    let model = Mat4::IDENTITY;
+    shader.use_shader();
 
-    shader.uniform_matrix("uModel", model);
     shader.uniform_matrix("uView", view);
     shader.uniform_matrix("uProjection", projection);
         
     texture.bind(0);
     shader.uniform_texture("uTexture", 0);
 
-    unsafe {
-        gl::BindVertexArray(mesh.vao);
-        gl::DrawArrays(gl::TRIANGLES, 0, mesh.vertex_count as i32);
-        gl::BindVertexArray(0);
+    for (&(cx, cy, cz), mesh) in chunk_meshes {
+        let model = Mat4::from_translation(Vec3::new(
+                (cx * CHUNK_SIZE as i32) as f32,
+                (cy * CHUNK_SIZE as i32) as f32,
+                (cz * CHUNK_SIZE as i32) as f32,
+        ));
+
+        shader.uniform_matrix("uModel", model);
+
+        unsafe {
+            gl::BindVertexArray(mesh.vao);
+            gl::DrawArrays(gl::TRIANGLES, 0, mesh.vertex_count as i32);
+            gl::BindVertexArray(0);
+        }
     }
+
+
 
     //println!("cam pos: {:?}, front: {:?}", camera.position, camera.front);
 

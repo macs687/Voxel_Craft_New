@@ -3,6 +3,7 @@ use super::VERTEX_SIZE;
 
 pub struct Mesh {
     pub vao: GLuint,
+    pub vbo: GLuint,
     pub vertex_count: usize
 }
 
@@ -50,6 +51,7 @@ impl Mesh {
 
         Self {
             vao,
+            vbo,
             vertex_count: vertex_count
         }
     }
@@ -91,7 +93,7 @@ pub fn create_crosshair_mesh() -> Mesh {
         gl::BindVertexArray(0);
     }
     
-    Mesh { vao, vertex_count: vertices.len() / 2 } // количество вершин = 12, по 2 координаты
+    Mesh { vao, vbo, vertex_count: vertices.len() / 2 } // количество вершин = 12, по 2 координаты
 }
 
 
@@ -135,5 +137,5 @@ pub fn create_wireframe_mesh() -> Mesh {
         gl::BindVertexArray(0);
     }
     
-    Mesh { vao, vertex_count: vertices.len() / 3 } // количество вершин
+    Mesh { vao, vbo, vertex_count: vertices.len() / 3 } // количество вершин
 }

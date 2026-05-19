@@ -1,5 +1,7 @@
 use crate::settings::*;
 use super::block::BlockType;
+use crate::settings::{CHUNK_D, CHUNK_H, CHUNK_W, CHUNK_SIZE};
+
 
 pub struct Chunk {
     pub blocks: [[[BlockType; CHUNK_SIZE]; CHUNK_SIZE]; CHUNK_SIZE],
