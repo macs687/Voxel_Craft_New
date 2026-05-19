@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use glam::{I16Vec3, Vec3};
-use crate::{graphics::VoxelRenderer, settings::CHUNK_SIZE, voxels::{BlockType, Chunk}, world::RayHit};
+use crate::{graphics::VoxelRenderer, settings::{CHUNK_SIZE, SEED}, voxels::{BlockType, Chunk}};
+
 
 use crate::graphics::Mesh;
 
@@ -8,14 +9,23 @@ pub type ChunkCoord = (i32, i32, i32);
 
 
 pub struct World {
-    pub chunks: HashMap<ChunkCoord, Chunk>
+    pub chunks: HashMap<ChunkCoord, Chunk>,
+    pub chunks_meshes: HashMap<ChunkCoord, Mesh>
+}
+
+
+#[derive(Debug, Clone, Copy)]
+pub struct RayHit {
+    pub block_pos: (i32, i32, i32), // координаты блока в мировом пространстве (целые)
+    pub normal: (i32, i32, i32),    // нормаль грани, в которую попал луч
 }
 
 
 impl World {
-    pub fn init() -> Self {
+    pub fn create() -> Self {
         let chunks = HashMap::new();
-        Self { chunks }
+        let chunks_meshes = HashMap::new();
+        Self { chunks, chunks_meshes }
     }
 
 
@@ -23,7 +33,7 @@ impl World {
         println!("Попытка загрузить чанк ({}, {}, {})", cx, cy, cz);
         if !self.chunks.contains_key(&(cx, cy, cz)) {
             let mut chunk = Chunk::new();
-            chunk.generate_test_terrain();
+            chunk.generate_terrain(cx, 0, cz, SEED);
             self.chunks.insert((cx, cy, cz), chunk);
             println!("Чанк ({}, {}, {}) добавлен. Всего чанков: {}", cx, cy, cz, self.chunks.len());
         } else {
@@ -69,11 +79,10 @@ impl World {
 
             chunk.set_block(lx, ly, lz, block);
         };
-    }    
-}
+    }
 
 
-pub fn rebuild_affected_meshes(world: &mut World, meshes: &mut HashMap<ChunkCoord, Mesh>, block_pos: (i32, i32, i32), renderer: &mut VoxelRenderer) {
+    fn calculete_meshes(&self, block_pos: (i32, i32, i32)) -> Vec<(i32, i32, i32)> {
         let cx = block_pos.0.div_euclid(CHUNK_SIZE as i32);
         let cy = block_pos.1.div_euclid(CHUNK_SIZE as i32);
         let cz = block_pos.2.div_euclid(CHUNK_SIZE as i32);
@@ -85,14 +94,20 @@ pub fn rebuild_affected_meshes(world: &mut World, meshes: &mut HashMap<ChunkCoor
             (0, 0, 1), (0, 0, -1),
         ] {
             let nc = (cx + dx, cy + dy, cz + dz);
-            if world.chunks.contains_key(&nc) {
+            if self.chunks.contains_key(&nc) {
                 to_rebuild.push(nc);
             }
         }
 
+        to_rebuild
+    }  
+
+
+    pub fn update(&mut self, block_pos: (i32, i32, i32), renderer: &mut VoxelRenderer) {
+        let to_rebuild = self.calculete_meshes(block_pos);
         for coord in to_rebuild {
-            if let Some(chunk) = world.chunks.get(&coord) {
-                let new_mesh = renderer.render(chunk, coord.0, coord.1, coord.2, world);
+            if let Some(chunk) = self.chunks.get(&coord) {
+                let new_mesh = renderer.render(chunk, coord.0, coord.1, coord.2, &self);
 
                 let new_chunk_mesh = Mesh {
                     vao: new_mesh.vao,
@@ -100,13 +115,16 @@ pub fn rebuild_affected_meshes(world: &mut World, meshes: &mut HashMap<ChunkCoor
                     vertex_count: new_mesh.vertex_count,
                 };
 
-                if let Some(old) = meshes.insert(coord, new_chunk_mesh) {
+                if let Some(old) = self.chunks_meshes.insert(coord, new_chunk_mesh) {
                     // Явно удаляем старые буферы (или полагаемся на Drop)
                     drop(old); // Drop освободит VAO и VBO
                 }
             }
         }
     }
+
+
+}
 
 
 pub fn raycast(world: &World, origin: Vec3, derection: Vec3, max_dist: f32) -> Option<RayHit> {

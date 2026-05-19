@@ -3,9 +3,6 @@ extern crate glfw;
 
 use glfw::Context;
 use crate::loger::ProjectErrors;
-use std::fmt::Error;
-use gl::{DEPTH_BUFFER_BIT, DEPTH_TEST};
-use glfw::ffi::glfwTerminate;
 use glfw::{fail_on_errors, Glfw, GlfwReceiver, PWindow, WindowEvent};
 
 
@@ -128,11 +125,17 @@ impl Window {
 
 
     /// стартовые настройки OpenGL
-    pub fn setting_openGL(&mut self) {
+    pub fn setting_open_gl(&mut self) {
         unsafe {
             gl::Enable(gl::DEPTH_TEST);
             gl::ClearColor(1.0,1.0, 1.0, 0.4);
             //gl::Enable(gl::CULL_FACE);
         }
+    }
+
+
+    ///hvebbuyv
+    pub fn set_swap_interval(&mut self) {
+        self.glfw.set_swap_interval(glfw::SwapInterval::Sync(1));
     }
 }

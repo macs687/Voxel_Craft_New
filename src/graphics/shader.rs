@@ -120,8 +120,8 @@ fn compile_shader(source_code: &CStr, shader_type: GLenum, stage: &'static str,)
 
 
 pub fn load_shader(vertex_file: &str, fragment_file: &str) -> Result<Shader, ProjectErrors> {
-    let mut vertex_code = read_shader_file(vertex_file)?;
-    let mut fragment_code = read_shader_file(fragment_file)?;
+    let vertex_code = read_shader_file(vertex_file)?;
+    let fragment_code = read_shader_file(fragment_file)?;
 
     let v_shader_code = code_to_cstring(vertex_code, "vertex_code")?;
     let f_shader_code = code_to_cstring(fragment_code, "fragment_code")?;

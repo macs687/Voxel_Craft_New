@@ -1,4 +1,4 @@
-use gl::types::{GLsizei, GLsizeiptr, GLuint};
+use gl::types::{GLsizei, GLuint};
 use super::VERTEX_SIZE;
 
 pub struct Mesh {

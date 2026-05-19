@@ -2,7 +2,6 @@ use glfw::Action;
 
 use super::Window;
 
-use crate::loger::ProjectErrors;
 
 const KEYS_COUNT: usize = 1024;
 const MOUSE_BUTTON_COUNT: usize = 8;

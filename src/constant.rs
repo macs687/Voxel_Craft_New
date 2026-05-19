@@ -15,7 +15,4 @@ pub const KEY_S: i32 = Key::S as i32;
 pub const KEY_D: i32 = Key::D as i32;
 pub const KEY_SPACE: i32 = Key::Space as i32;
 pub const KEY_LEFT_SHIFT: i32 = Key::LeftShift as i32;
-
-
-pub const MOVE_SPEED: f32 = 5.0;   // метров в секунду
-pub const MOUSE_SENSITIVITY: f32 = 0.1;
+pub const KEY_ESC: i32 = Key::Escape as i32;

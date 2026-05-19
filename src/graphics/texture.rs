@@ -1,8 +1,8 @@
 use std::path::Path;
 
 use gl::types::GLuint;
-use crate::loger::ProjectErrors;
-use image::{GenericImageView, open};
+use crate::{loger::ProjectErrors};
+use image::{GenericImageView};
 
 pub struct Texture {
     id: GLuint
@@ -65,5 +65,6 @@ pub fn load_texture_from_png(path: &str) -> Result<Texture, ProjectErrors> {
         );
     };
 
-    Ok(Texture { id })
+    let texture = Texture::new(id);
+    Ok(texture)
 }

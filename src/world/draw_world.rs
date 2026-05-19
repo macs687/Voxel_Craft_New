@@ -1,13 +1,10 @@
 use std::collections::HashMap;
-
 use crate::settings::CHUNK_SIZE;
-use crate::core::{Camera, Events, Window};
-use crate::graphics::{Mesh, Shader, Texture, VoxelRenderer};
-use crate::voxels::Chunk;
+use crate::core::{Camera, Window};
+use crate::graphics::{Mesh, Shader, Texture};
 use crate::world::{ChunkCoord, RayHit};
 use glam::{Mat4, Vec3};
-use crate::constant::{self, *};
-use crate::voxels::BlockType;
+
 
 pub fn draw_world(window: &mut Window, shader: &Shader, camera: &Camera, texture: &Texture, chunk_meshes: &HashMap<ChunkCoord, Mesh>, crosshair_shader: &Shader, crosshair_mesh: &Mesh, line_shader: &Shader, cube_mesh: &Mesh, hit: &Option<RayHit>) {
     window.gl_clear();
