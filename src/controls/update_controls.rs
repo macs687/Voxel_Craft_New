@@ -31,6 +31,7 @@ pub fn update_moving(events: &mut Events, camera: &mut Camera, world: &mut World
         if events.j_clicked(LCM) {
             world.set_block(hit.block_pos.0 as i32, hit.block_pos.1 as i32, hit.block_pos.2 as i32, BlockType::Air);
             world.update(hit.block_pos, renderer);
+            //println!("обноваление мира");
         } else if events.j_clicked(PCM) {
             world.set_block(hit.block_pos.0 as i32, hit.block_pos.1 as i32, hit.block_pos.2 as i32, BlockType::Planks);
             world.update(hit.block_pos, renderer);

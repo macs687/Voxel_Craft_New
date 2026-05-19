@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use glam::{I16Vec3, Vec3};
-use crate::{graphics::VoxelRenderer, settings::{CHUNK_SIZE, SEED}, voxels::{BlockType, Chunk}};
+use crate::{graphics::VoxelRenderer, settings::{CHUNK_H, CHUNK_W, CHUNK_D, SEED}, voxels::{BlockType, Chunk}};
 
 
 use crate::graphics::Mesh;
@@ -52,14 +52,14 @@ impl World {
 
 
     pub fn get_block(&self, x: i32, y:i32, z:i32) -> Option<BlockType> {
-        let cx = x.div_euclid(CHUNK_SIZE as i32);
-        let cy = y.div_euclid(CHUNK_SIZE as i32);
-        let cz = z.div_euclid(CHUNK_SIZE as i32);
+        let cx = x.div_euclid(CHUNK_W as i32);
+        let cy = y.div_euclid(CHUNK_H as i32);
+        let cz = z.div_euclid(CHUNK_D as i32);
 
         let block = self.chunks.get(&(cx, cy, cz)).and_then(|chunk| {
-            let lx = x.rem_euclid(CHUNK_SIZE as i32) as usize;
-            let ly = y.rem_euclid(CHUNK_SIZE as i32) as usize;
-            let lz = z.rem_euclid(CHUNK_SIZE as i32) as usize;
+            let lx = x.rem_euclid(CHUNK_W as i32) as usize;
+            let ly = y.rem_euclid(CHUNK_H as i32) as usize;
+            let lz = z.rem_euclid(CHUNK_D as i32) as usize;
             chunk.get_block(lx, ly, lz)
         });
 
@@ -68,14 +68,14 @@ impl World {
 
 
     pub fn set_block(&mut self, x: i32, y: i32, z: i32, block: BlockType) {
-        let cx = x.div_euclid(CHUNK_SIZE as i32);
-        let cy = y.div_euclid(CHUNK_SIZE as i32);
-        let cz = z.div_euclid(CHUNK_SIZE as i32);
+        let cx = x.div_euclid(CHUNK_W as i32);
+        let cy = y.div_euclid(CHUNK_H as i32);
+        let cz = z.div_euclid(CHUNK_D as i32);
 
         if let Some(chunk) = self.chunks.get_mut(&(cx, cy, cz)) {
-            let lx = x.rem_euclid(CHUNK_SIZE as i32) as usize;
-            let ly = y.rem_euclid(CHUNK_SIZE as i32) as usize;
-            let lz = z.rem_euclid(CHUNK_SIZE as i32) as usize;
+            let lx = x.rem_euclid(CHUNK_W as i32) as usize;
+            let ly = y.rem_euclid(CHUNK_H as i32) as usize;
+            let lz = z.rem_euclid(CHUNK_D as i32) as usize;
 
             chunk.set_block(lx, ly, lz, block);
         };
@@ -83,9 +83,9 @@ impl World {
 
 
     fn calculete_meshes(&self, block_pos: (i32, i32, i32)) -> Vec<(i32, i32, i32)> {
-        let cx = block_pos.0.div_euclid(CHUNK_SIZE as i32);
-        let cy = block_pos.1.div_euclid(CHUNK_SIZE as i32);
-        let cz = block_pos.2.div_euclid(CHUNK_SIZE as i32);
+        let cx = block_pos.0.div_euclid(CHUNK_W as i32);
+        let cy = block_pos.1.div_euclid(CHUNK_H as i32);
+        let cz = block_pos.2.div_euclid(CHUNK_D as i32);
 
         let mut to_rebuild = vec![(cx, cy, cz)];
         for (dx, dy, dz) in [
@@ -116,14 +116,13 @@ impl World {
                 };
 
                 if let Some(old) = self.chunks_meshes.insert(coord, new_chunk_mesh) {
+                    println!("Chunk {:?} new vertex count: {}", coord, new_mesh.vertex_count);
                     // Явно удаляем старые буферы (или полагаемся на Drop)
                     drop(old); // Drop освободит VAO и VBO
                 }
             }
         }
     }
-
-
 }
 
 

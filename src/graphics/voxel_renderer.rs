@@ -1,4 +1,4 @@
-use crate::{graphics::mesh::Mesh, settings::CHUNK_SIZE, voxels::{BlockType, Chunk}, world::World};
+use crate::{graphics::mesh::Mesh, settings::{CHUNK_D, CHUNK_H, CHUNK_W}, voxels::{BlockType, Chunk}, world::World};
 
 pub struct VoxelRenderer {
     buffer: Vec<f32>
@@ -12,18 +12,20 @@ impl VoxelRenderer {
     
 
     pub fn render(&mut self, chunk: &Chunk, chunk_x: i32, chunk_y: i32, chunk_z: i32, world: &World) -> Mesh {
-        for y in 0..CHUNK_SIZE {
-            for z in 0..CHUNK_SIZE {
-                for x in 0..CHUNK_SIZE {
+        self.buffer.clear();
+        
+        for y in 0..CHUNK_H {
+            for z in 0..CHUNK_D {
+                for x in 0..CHUNK_W {
                     let block = chunk.blocks[y][z][x];
 
                     if block == BlockType::Air {
                         continue;
                     }
 
-                    let gx = chunk_x * CHUNK_SIZE as i32 + x as i32;
-                    let gy = chunk_y * CHUNK_SIZE as i32 + y as i32;
-                    let gz = chunk_z * CHUNK_SIZE as i32 + z as i32;
+                    let gx = chunk_x * CHUNK_W as i32 + x as i32;
+                    let gy = chunk_y * CHUNK_H as i32 + y as i32;
+                    let gz = chunk_z * CHUNK_D as i32 + z as i32;
 
                     let cx = x as f32;
                     let cy = y as f32;

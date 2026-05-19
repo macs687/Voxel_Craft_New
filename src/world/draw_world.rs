@@ -1,7 +1,7 @@
 use std::collections::HashMap;
-use crate::settings::CHUNK_SIZE;
 use crate::core::{Camera, Window};
 use crate::graphics::{Mesh, Shader, Texture};
+use crate::settings::{CHUNK_D, CHUNK_H, CHUNK_W};
 use crate::world::{ChunkCoord, RayHit};
 use glam::{Mat4, Vec3};
 
@@ -21,9 +21,9 @@ pub fn draw_world(window: &mut Window, shader: &Shader, camera: &Camera, texture
 
     for (&(cx, cy, cz), mesh) in chunk_meshes {
         let model = Mat4::from_translation(Vec3::new(
-                (cx * CHUNK_SIZE as i32) as f32,
-                (cy * CHUNK_SIZE as i32) as f32,
-                (cz * CHUNK_SIZE as i32) as f32,
+                (cx * CHUNK_W as i32) as f32,
+                (cy * CHUNK_H as i32) as f32,
+                (cz * CHUNK_D as i32) as f32,
         ));
 
         shader.uniform_matrix("uModel", model);
