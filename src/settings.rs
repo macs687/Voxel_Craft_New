@@ -15,7 +15,7 @@ pub const SPAWNPOINT: Vec3 = Vec3::new(0.0, 30.0, -10.0);
 /// угол обзора
 pub const FOV: f32 = 40.0_f32.to_radians();
 /// скорость
-pub const MOVE_SPEED: f32 = 5.0; 
+pub const MOVE_SPEED: f32 = 15.0; 
 /// название окна 
 pub const TITLE: &str = "Voxel_Craft";
 /// ширина окна
@@ -28,3 +28,6 @@ pub const BLOCK_TYPES_NUMBER: i32 = 6;
 /// НАСТРОЙКИ РЭЙКАСТА
 pub const MAX_STEPS: i32 = 30;
 pub const RANGE: i32 = 7;
+
+/// дальность прорисовки
+pub const RENDER_DIST: i32 = 4;

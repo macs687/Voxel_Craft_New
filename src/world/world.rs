@@ -1,6 +1,6 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use glam::{I16Vec3, Vec3, IVec3};
-use crate::{graphics::VoxelRenderer, settings::{CHUNK_H, CHUNK_W, CHUNK_D, SEED, MAX_STEPS}, voxels::{BlockType, Chunk}};
+use crate::{graphics::VoxelRenderer, settings::{CHUNK_D, CHUNK_H, CHUNK_W, MAX_STEPS, RENDER_DIST, SEED}, voxels::{BlockType, Chunk}};
 
 
 use crate::graphics::Mesh;
@@ -145,6 +145,33 @@ impl World {
         self.max_cz = self.chunks.keys().map(|&(_, _, cz)| cz).max().unwrap_or(0);
 
         println!("update_chunks: границы X=[{}..{}], Z=[{}..{}]", self.min_cx, self.max_cx, self.min_cz, self.max_cz);
+    }
+
+
+    pub fn update_world(&mut self, player_cx: i32, player_cz: i32) {
+        let mut required = HashSet::new();
+
+        for dx in -RENDER_DIST..RENDER_DIST {
+            for dz in -RENDER_DIST..RENDER_DIST {
+                required.insert((player_cx + dx, 0, player_cz + dz));
+            }
+        }
+
+        self.chunks.retain(|&(cx, cy, cz), _| required.contains(&(cx, cy, cz)));
+
+        for &(cx, cy, cz) in &required {
+            self.load_chunk(cx, cy, cz);
+        }
+
+        if self.chunks.is_empty() {
+            self.min_cx = 0; self.max_cx = 0;
+            self.min_cz = 0; self.max_cz = 0;
+        } else {
+            self.min_cx = self.chunks.keys().map(|&(cx, _, _)| cx).min().unwrap();
+            self.max_cx = self.chunks.keys().map(|&(cx, _, _)| cx).max().unwrap();
+            self.min_cz = self.chunks.keys().map(|&(_, _, cz)| cz).min().unwrap();
+            self.max_cz = self.chunks.keys().map(|&(_, _, cz)| cz).max().unwrap();
+        }
     }
 }
 

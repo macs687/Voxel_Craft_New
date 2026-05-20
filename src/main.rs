@@ -1,5 +1,5 @@
 use std::time::Instant;
-use settings::{HEIGHT, TITLE, WIDTH, SPAWNPOINT, FOV};
+use settings::{HEIGHT, TITLE, WIDTH, SPAWNPOINT, FOV, CHUNK_D, CHUNK_H, CHUNK_W};
 use loger::ProjectErrors;
 use core::{Window, Events, Camera};
 use graphics::{load_shader, load_texture_from_png};
@@ -59,7 +59,7 @@ fn main() -> Result<(), ProjectErrors> {
     println!("инициализация рендер движка: ок");
 
     println!("Создание мира");
-    let world_controller = WorldController::init();
+    let mut world_controller = WorldController::init();
     let mut world = world_controller.create_world(&mut renderer);
     println!("Создание мира: ок");
     
@@ -72,8 +72,6 @@ fn main() -> Result<(), ProjectErrors> {
 
     let mut selected_block = BlockType::Planks;
 
-
-
     println!("Start main loop");
     while window.is_open() {
         // ОБНОВЛЕНИЕ СОБЫТИЙ
@@ -85,6 +83,9 @@ fn main() -> Result<(), ProjectErrors> {
         update(&mut events, &mut window);
         let hit = raycast(&world, camera.position, camera.front, RANGE as f32);
         update_moving(&mut events, &mut camera, &mut world, delta_time, &mut renderer, &hit, selected_block);
+
+        // БЕСКОНЕЧНЫЙ МИР
+        world_controller.generate_world(&camera, &mut world, &mut renderer);
 
         // РЕНДЕР МИРА
         draw_world(&mut window, &shader, &camera, &texture, &world.chunks_meshes, &crosshair_shader, &crosshair_mesh, &line_shader, &cube_mesh, &hit);
