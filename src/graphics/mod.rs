@@ -12,4 +12,4 @@ pub use shader::load_shader;
 pub use texture::load_texture_from_png;
 pub use voxel_renderer::VoxelRenderer;
 pub use mesh::create_wireframe_mesh;
-const VERTEX_SIZE: usize = 5;
+const VERTEX_SIZE: usize = 6;

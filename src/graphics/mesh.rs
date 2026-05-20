@@ -20,28 +20,41 @@ impl Mesh {
             gl::BindVertexArray(vao);
 
             gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-            gl::BufferData(gl::ARRAY_BUFFER,
-                (buffer.len() * std::mem::size_of::<f32>()) as isize, 
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                (buffer.len() * std::mem::size_of::<f32>()) as _,
                 buffer.as_ptr() as *const _,
                 gl::STATIC_DRAW
             );
 
+            // location = 0
+
             let stride = (VERTEX_SIZE * std::mem::size_of::<f32>()) as i32;
 
             gl::VertexAttribPointer(
-            0,
-            3,
-            gl::FLOAT,
-            gl::FALSE,
-            stride as GLsizei,
-            std::ptr::null()
+                0,
+                3,
+                gl::FLOAT,
+                gl::FALSE,
+                stride as GLsizei,
+                std::ptr::null()
             );
             gl::EnableVertexAttribArray(0);
+
+            // uv location = 1
 
             let uv_offset = (3 * std::mem::size_of::<f32>()) as *const std::ffi::c_void;
 
             gl::VertexAttribPointer(1, 2, gl::FLOAT, gl::FALSE, stride, uv_offset);
             gl::EnableVertexAttribArray(1);
+
+            // texture location 2
+
+            let texture_offset = (5 * std::mem::size_of::<f32>()) as *const std::ffi::c_void;
+
+            gl::VertexAttribPointer(2, 1, gl::FLOAT, gl::FALSE, stride, texture_offset);
+            gl::EnableVertexAttribArray(2);
+
 
             gl::BindBuffer(gl::ARRAY_BUFFER, 0);
             gl::BindVertexArray(0);
@@ -139,3 +152,13 @@ pub fn create_wireframe_mesh() -> Mesh {
     
     Mesh { vao, vbo, vertex_count: vertices.len() / 3 } // количество вершин
 }
+
+
+// impl Drop for Mesh {
+//     fn drop(&mut self) {
+//         unsafe {
+//             gl::DeleteVertexArrays(1, &self.vao);
+//             gl::DeleteBuffers(1, &self.vbo);
+//         }
+//     }
+// }

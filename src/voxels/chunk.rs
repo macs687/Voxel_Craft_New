@@ -57,7 +57,7 @@ impl Chunk {
 
                 for y in 0..CHUNK_H {
                     let block = if (y as i32) < surface_y {
-                        BlockType::Planks
+                        BlockType::Dirt
                     } else if (y as i32) == surface_y {
                         BlockType::Planks
                     } else {

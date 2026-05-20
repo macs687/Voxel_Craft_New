@@ -41,26 +41,26 @@ pub fn draw_world(window: &mut Window, shader: &Shader, camera: &Camera, texture
 
     //println!("ray cast normal");
     // Рисуем wireframe куб вокруг блока
-    if let Some(hit) = hit {
-        let model = Mat4::from_translation(Vec3::new(
-            hit.block_pos.0 as f32,
-            hit.block_pos.1 as f32,
-            hit.block_pos.2 as f32,
-        )) * Mat4::from_scale(Vec3::splat(1.005)); // чуть больше, чтобы не застревать
+    // if let Some(hit) = hit {
+    //     let model = Mat4::from_translation(Vec3::new(
+    //         hit.block_pos.0 as f32,
+    //         hit.block_pos.1 as f32,
+    //         hit.block_pos.2 as f32,
+    //     )) * Mat4::from_scale(Vec3::splat(1.005)); // чуть больше, чтобы не застревать
 
-        line_shader.use_shader();
-        line_shader.uniform_matrix("uModel", model);
-        line_shader.uniform_matrix("uView", view);
-        line_shader.uniform_matrix("uProjection", projection);
-        line_shader.uniform_vec4("uColor", 0.0, 0.0, 0.0, 1.0); // чёрный контур
+    //     line_shader.use_shader();
+    //     line_shader.uniform_matrix("uModel", model);
+    //     line_shader.uniform_matrix("uView", view);
+    //     line_shader.uniform_matrix("uProjection", projection);
+    //     line_shader.uniform_vec4("uColor", 0.0, 0.0, 0.0, 1.0); // чёрный контур
 
-        unsafe {
-            // Линии рисуются без отсечения граней, и с тестом глубины
-            gl::BindVertexArray(cube_mesh.vao);
-            gl::DrawArrays(gl::LINES, 0, cube_mesh.vertex_count as i32);
-            gl::BindVertexArray(0);
-        }
-    }
+    //     unsafe {
+    //         // Линии рисуются без отсечения граней, и с тестом глубины
+    //         gl::BindVertexArray(cube_mesh.vao);
+    //         gl::DrawArrays(gl::LINES, 0, cube_mesh.vertex_count as i32);
+    //         gl::BindVertexArray(0);
+    //     }
+    // }
     
 
     crosshair_shader.use_shader();

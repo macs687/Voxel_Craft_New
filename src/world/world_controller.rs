@@ -28,7 +28,7 @@ impl WorldController {
             });
         }
 
-        World { chunks: world.chunks, chunks_meshes: world.chunks_meshes }
+        World { chunks: world.chunks, chunks_meshes: world.chunks_meshes, min_cx: 0, max_cx: 0, min_cz: 0, max_cz: 0 }
     }
 
 }

@@ -5,5 +5,10 @@
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum BlockType {
     Air,
-    Planks 
+    Dirt,
+    Planks,
+    Grass,
+    Stone,       // камень
+    Sand,        // песок
+    Wood,
 }

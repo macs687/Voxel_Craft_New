@@ -11,7 +11,7 @@ pub const MOUSE_SENSITIVITY: f32 = 0.001;
 /// сид мира
 pub const SEED: u32 = 1232;
 /// спавнпоинт
-pub const SPAWNPOINT: Vec3 = Vec3::new(0.0, 16.0, -10.0);
+pub const SPAWNPOINT: Vec3 = Vec3::new(0.0, 30.0, -10.0);
 /// угол обзора
 pub const FOV: f32 = 40.0_f32.to_radians();
 /// скорость
@@ -22,3 +22,9 @@ pub const TITLE: &str = "Voxel_Craft";
 pub const WIDTH: u32 = 1920;
 /// высота окна
 pub const HEIGHT: u32 = 1080;
+/// кол во типов блоков
+pub const BLOCK_TYPES_NUMBER: i32 = 6;
+
+/// НАСТРОЙКИ РЭЙКАСТА
+pub const MAX_STEPS: i32 = 30;
+pub const RANGE: i32 = 7;

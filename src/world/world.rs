@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-use glam::{I16Vec3, Vec3};
-use crate::{graphics::VoxelRenderer, settings::{CHUNK_H, CHUNK_W, CHUNK_D, SEED}, voxels::{BlockType, Chunk}};
+use glam::{I16Vec3, Vec3, IVec3};
+use crate::{graphics::VoxelRenderer, settings::{CHUNK_H, CHUNK_W, CHUNK_D, SEED, MAX_STEPS}, voxels::{BlockType, Chunk}};
 
 
 use crate::graphics::Mesh;
@@ -10,14 +10,18 @@ pub type ChunkCoord = (i32, i32, i32);
 
 pub struct World {
     pub chunks: HashMap<ChunkCoord, Chunk>,
-    pub chunks_meshes: HashMap<ChunkCoord, Mesh>
+    pub chunks_meshes: HashMap<ChunkCoord, Mesh>,
+    pub min_cx: i32,
+    pub max_cx: i32,
+    pub min_cz: i32,
+    pub max_cz: i32,
 }
 
 
 #[derive(Debug, Clone, Copy)]
 pub struct RayHit {
     pub block_pos: (i32, i32, i32), // координаты блока в мировом пространстве (целые)
-    pub normal: (i32, i32, i32),    // нормаль грани, в которую попал луч
+    pub normal: (i32, i32, i32), // нормаль грани, в которую попал луч
 }
 
 
@@ -25,7 +29,14 @@ impl World {
     pub fn create() -> Self {
         let chunks = HashMap::new();
         let chunks_meshes = HashMap::new();
-        Self { chunks, chunks_meshes }
+        Self {
+            chunks, 
+            chunks_meshes,
+            min_cx: 0,
+            max_cx: 0,
+            min_cz: 0,
+            max_cz: 0 
+        }
     }
 
 
@@ -116,19 +127,37 @@ impl World {
                 };
 
                 if let Some(old) = self.chunks_meshes.insert(coord, new_chunk_mesh) {
-                    println!("Chunk {:?} new vertex count: {}", coord, new_mesh.vertex_count);
+                    //println!("Chunk {:?} new vertex count: {}", coord, new_mesh.vertex_count);
                     // Явно удаляем старые буферы (или полагаемся на Drop)
-                    drop(old); // Drop освободит VAO и VBO
+                    //drop(old); // Drop освободит VAO и VBO
+
+                    unsafe {
+                        gl::DeleteVertexArrays(1, &old.vao);
+                        gl::DeleteBuffers(1, &old.vbo);
+                    }
                 }
             }
         }
+
+        self.min_cx = self.chunks.keys().map(|&(cx, _, _)| cx).min().unwrap_or(0);
+        self.max_cx = self.chunks.keys().map(|&(cx, _, _)| cx).max().unwrap_or(0);
+        self.min_cz = self.chunks.keys().map(|&(_, _, cz)| cz).min().unwrap_or(0);
+        self.max_cz = self.chunks.keys().map(|&(_, _, cz)| cz).max().unwrap_or(0);
+
+        println!("update_chunks: границы X=[{}..{}], Z=[{}..{}]", self.min_cx, self.max_cx, self.min_cz, self.max_cz);
     }
 }
 
 
 pub fn raycast(world: &World, origin: Vec3, derection: Vec3, max_dist: f32) -> Option<RayHit> {
         let dir = derection.normalize();
-        let mut map_pos = I16Vec3::new(origin.x.floor() as i16, origin.y.floor() as i16, origin.z.floor() as i16);
+        let mut map_pos = IVec3::new(origin.x.floor() as i32, origin.y.floor() as i32, origin.z.floor() as i32);
+
+        let margin = 1.0;
+        let min_wx = (world.min_cx * CHUNK_W as i32) as f32 - margin;
+        let max_wx = ((world.max_cx + 1) * CHUNK_W as i32) as f32 + margin;
+        let min_wz = (world.min_cz * CHUNK_D as i32) as f32 - margin;
+        let max_wz = ((world.max_cz + 1) * CHUNK_D as i32) as f32 + margin;
 
         let delta_dist = Vec3::new(
             if dir.x == 0.0 { f32::MAX } else { (1.0 / dir.x).abs() },
@@ -136,7 +165,7 @@ pub fn raycast(world: &World, origin: Vec3, derection: Vec3, max_dist: f32) -> O
             if dir.z == 0.0 { f32::MAX } else { (1.0 / dir.z).abs() },
         );
 
-        let step = I16Vec3::new(        // (4)
+        let step = IVec3::new(
             if dir.x > 0.0 { 1 } else { -1 },
             if dir.y > 0.0 { 1 } else { -1 },
             if dir.z > 0.0 { 1 } else { -1 },
@@ -160,46 +189,44 @@ pub fn raycast(world: &World, origin: Vec3, derection: Vec3, max_dist: f32) -> O
             },
         );
 
-        let mut last_normal = I16Vec3::ZERO;
-        let max_steps = (max_dist * 2.0) as i32;
+        let mut last_normal = IVec3::ZERO;
+        let max_steps = MAX_STEPS;
 
         for _ in 0..max_steps {
+            let wx = map_pos.x as f32;
+            let wz = map_pos.z as f32;
+            // if wx < min_wx || wx > max_wx || wz < min_wz || wz > max_wz {
+            //     break;
+            // }
+
             if let Some(block) = world.get_block(map_pos.x as i32, map_pos.y as i32, map_pos.z as i32) {
                 if block != BlockType::Air {
                     return Some(RayHit {
-                        block_pos: (map_pos.x as i32,
-                                    map_pos.y as i32,
-                                    map_pos.z as i32),
-                        normal: (last_normal.x as i32, 
-                                last_normal.y as i32,
-                                last_normal.z as i32) 
+                        block_pos: (map_pos.x as i32, map_pos.y as i32, map_pos.z as i32),
+                        normal: (last_normal.x as i32, last_normal.y as i32, last_normal.z as i32),
                     });
-                }  
+                }
             }
 
             if side_dist.x < side_dist.y {
                 if side_dist.x < side_dist.z {
-                    // X – самая близкая граница
                     map_pos.x += step.x;
                     side_dist.x += delta_dist.x;
-                    last_normal = I16Vec3::new(-step.x, 0, 0);
+                    last_normal = IVec3::new(-step.x, 0, 0);
                 } else {
-                    // Z – самая близкая
                     map_pos.z += step.z;
                     side_dist.z += delta_dist.z;
-                    last_normal = I16Vec3::new(0, 0, -step.z);
+                    last_normal = IVec3::new(0, 0, -step.z);
                 }
             } else {
                 if side_dist.y < side_dist.z {
-                    // Y – самая близкая
                     map_pos.y += step.y;
                     side_dist.y += delta_dist.y;
-                    last_normal = I16Vec3::new(0, -step.y, 0);
+                    last_normal = IVec3::new(0, -step.y, 0);
                 } else {
-                    // Z – самая близкая
                     map_pos.z += step.z;
                     side_dist.z += delta_dist.z;
-                    last_normal = I16Vec3::new(0, 0, -step.z);
+                    last_normal = IVec3::new(0, 0, -step.z);
                 }
             }
 

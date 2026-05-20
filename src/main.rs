@@ -11,7 +11,8 @@ use controls::update_moving;
 use world::raycast;
 use world::draw_world;
 use world::WorldController;
-
+use crate::settings::RANGE;
+use crate::voxels::BlockType;
 
 mod constant;
 mod settings;
@@ -49,7 +50,7 @@ fn main() -> Result<(), ProjectErrors> {
     println!("создание базовой шейдерной программы завершено");
 
     println!("загрузка текстуры");
-    let texture = load_texture_from_png("res/textures/planks.jpg")?;
+    let texture = load_texture_from_png("res/textures/block.png")?;
     println!("загрузка текстуры: ок");
 
     // ЗАГРУЗКА МИРА
@@ -69,6 +70,10 @@ fn main() -> Result<(), ProjectErrors> {
     window.setting_open_gl();
     let mut last_frame = Instant::now();
 
+    let mut selected_block = BlockType::Planks;
+
+
+
     println!("Start main loop");
     while window.is_open() {
         // ОБНОВЛЕНИЕ СОБЫТИЙ
@@ -78,8 +83,8 @@ fn main() -> Result<(), ProjectErrors> {
 
         // ИГРОВАЯ ЛОГИКА
         update(&mut events, &mut window);
-        let hit = raycast(&world, camera.position, camera.front, 8.0);
-        update_moving(&mut events, &mut camera, &mut world, delta_time, &mut renderer, &hit);
+        let hit = raycast(&world, camera.position, camera.front, RANGE as f32);
+        update_moving(&mut events, &mut camera, &mut world, delta_time, &mut renderer, &hit, selected_block);
 
         // РЕНДЕР МИРА
         draw_world(&mut window, &shader, &camera, &texture, &world.chunks_meshes, &crosshair_shader, &crosshair_mesh, &line_shader, &cube_mesh, &hit);

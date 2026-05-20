@@ -1,5 +1,13 @@
 use crate::{graphics::mesh::Mesh, settings::{CHUNK_D, CHUNK_H, CHUNK_W}, voxels::{BlockType, Chunk}, world::World};
 
+const ATLAS_COLS: f32 = 16.0;   // количество столбцов в атласе
+const ATLAS_ROWS: f32 = 16.0;   // количество строк
+const TILE_SIZE: f32 = 1.0 / 16.0; // размер одного тайла в UV‑координатах (0..1)
+
+
+
+
+
 pub struct VoxelRenderer {
     buffer: Vec<f32>
 }
@@ -13,11 +21,13 @@ impl VoxelRenderer {
 
     pub fn render(&mut self, chunk: &Chunk, chunk_x: i32, chunk_y: i32, chunk_z: i32, world: &World) -> Mesh {
         self.buffer.clear();
-        
+
         for y in 0..CHUNK_H {
             for z in 0..CHUNK_D {
                 for x in 0..CHUNK_W {
                     let block = chunk.blocks[y][z][x];
+
+                    let block_id = block as i32 as f32;
 
                     if block == BlockType::Air {
                         continue;
@@ -50,7 +60,7 @@ impl VoxelRenderer {
                         let visible = neighbor.map_or(true, |b| b == BlockType::Air);
                         
                         if visible {
-                            add_face(&mut self.buffer, cx, cy, cz, s, (dx, dy, dz));
+                            add_face(&mut self.buffer, cx, cy, cz, s, (dx, dy, dz), block_id);
                         }
                     }
                 }   
@@ -62,11 +72,20 @@ impl VoxelRenderer {
 }
 
 
-fn add_face(buffer: &mut Vec<f32>, cx: f32, cy: f32, cz: f32, s: f32, dir: (i32, i32, i32)) {
-    let uv00 = (0.0f32, 0.0f32);
-    let uv10 = (1.0, 0.0);
-    let uv11 = (1.0, 1.0);
-    let uv01 = (0.0, 1.0);
+fn add_face(buffer: &mut Vec<f32>, cx: f32, cy: f32, cz: f32, s: f32, dir: (i32, i32, i32), texture: f32) {
+    let col = texture as i32 % 16;
+    let row = texture as i32 / 16;
+    let u_min = col as f32 * TILE_SIZE;
+    let v_min = 1.0 - (row + 1) as f32 * TILE_SIZE; // переворот Y, если нужно
+    let u_max = u_min + TILE_SIZE;
+    let v_max = v_min + TILE_SIZE;
+
+
+    let uv00 = (u_min, v_min);
+    let uv10 = (u_max, v_min);
+    let uv11 = (u_max, v_max);
+    let uv01 = (u_min, v_max);
+
 
     let (v0, v1, v2, v3): ((f32, f32, f32), (f32, f32, f32), (f32, f32, f32), (f32, f32, f32)) = match dir {
         ( 1,  0,  0) => ( // право (+x)
@@ -109,20 +128,21 @@ fn add_face(buffer: &mut Vec<f32>, cx: f32, cy: f32, cz: f32, s: f32, dir: (i32,
     };
 
     // Первый треугольник: v0, v1, v2
-    push_vertex(buffer, v0.0, v0.1, v0.2, uv00.0, uv00.1);
-    push_vertex(buffer, v1.0, v1.1, v1.2, uv10.0, uv10.1);
-    push_vertex(buffer, v2.0, v2.1, v2.2, uv11.0, uv11.1);
+    push_vertex(buffer, v0.0, v0.1, v0.2, uv00.0, uv00.1, texture);
+    push_vertex(buffer, v1.0, v1.1, v1.2, uv10.0, uv10.1, texture);
+    push_vertex(buffer, v2.0, v2.1, v2.2, uv11.0, uv11.1, texture);
     // Второй треугольник: v0, v2, v3
-    push_vertex(buffer, v0.0, v0.1, v0.2, uv00.0, uv00.1);
-    push_vertex(buffer, v2.0, v2.1, v2.2, uv11.0, uv11.1);
-    push_vertex(buffer, v3.0, v3.1, v3.2, uv01.0, uv01.1);
+    push_vertex(buffer, v0.0, v0.1, v0.2, uv00.0, uv00.1, texture);
+    push_vertex(buffer, v2.0, v2.1, v2.2, uv11.0, uv11.1, texture);
+    push_vertex(buffer, v3.0, v3.1, v3.2, uv01.0, uv01.1, texture);
 }
 
 
-fn push_vertex(buffer: &mut Vec<f32>, x: f32, y: f32, z: f32, u: f32, v: f32) {
+fn push_vertex(buffer: &mut Vec<f32>, x: f32, y: f32, z: f32, u: f32, v: f32, texture: f32) {
     buffer.push(x);
     buffer.push(y);
     buffer.push(z);
     buffer.push(u);
     buffer.push(v);
+    buffer.push(texture);
 }
