@@ -13,7 +13,7 @@ pub const SEED: u32 = 1232;
 /// спавнпоинт
 pub const SPAWNPOINT: Vec3 = Vec3::new(0.0, 30.0, -10.0);
 /// угол обзора
-pub const FOV: f32 = 40.0_f32.to_radians();
+pub const FOV: f32 = 70.0_f32.to_radians();
 /// скорость
 pub const MOVE_SPEED: f32 = 15.0; 
 /// название окна 
@@ -31,3 +31,10 @@ pub const RANGE: i32 = 7;
 
 /// дальность прорисовки
 pub const RENDER_DIST: i32 = 4;
+
+
+pub const PLAYER_WIDTH: f32 = 0.6;
+pub const PLAYER_HEIGHT: f32 = 1.8;
+pub const BASE_PLAYER_EYE_HEIGHT: f32 = 2.0;
+pub const GRAVITY: f32 = -25.0;
+pub const JUMP_FORCE: f32 = 8.0;

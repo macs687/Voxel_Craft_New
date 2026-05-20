@@ -1,5 +1,5 @@
 use std::time::Instant;
-use settings::{HEIGHT, TITLE, WIDTH, SPAWNPOINT, FOV, CHUNK_D, CHUNK_H, CHUNK_W};
+use settings::{HEIGHT, TITLE, WIDTH, SPAWNPOINT, FOV};
 use loger::ProjectErrors;
 use core::{Window, Events, Camera};
 use graphics::{load_shader, load_texture_from_png};
@@ -13,6 +13,8 @@ use world::draw_world;
 use world::WorldController;
 use crate::settings::RANGE;
 use crate::voxels::BlockType;
+use player::Player;
+
 
 mod constant;
 mod settings;
@@ -23,6 +25,7 @@ mod world;
 mod controls;
 mod physics;
 mod voxels;
+mod player;
 
 
 fn main() -> Result<(), ProjectErrors> {
@@ -70,7 +73,8 @@ fn main() -> Result<(), ProjectErrors> {
     window.setting_open_gl();
     let mut last_frame = Instant::now();
 
-    let mut selected_block = BlockType::Planks;
+    let mut player = Player::init(SPAWNPOINT);
+
 
     println!("Start main loop");
     while window.is_open() {
@@ -82,7 +86,7 @@ fn main() -> Result<(), ProjectErrors> {
         // ИГРОВАЯ ЛОГИКА
         update(&mut events, &mut window);
         let hit = raycast(&world, camera.position, camera.front, RANGE as f32);
-        update_moving(&mut events, &mut camera, &mut world, delta_time, &mut renderer, &hit, selected_block);
+        update_moving(&mut events, &mut camera, &mut world, delta_time, &mut renderer, &hit, &mut player);
 
         // БЕСКОНЕЧНЫЙ МИР
         world_controller.generate_world(&camera, &mut world, &mut renderer);
