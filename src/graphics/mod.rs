@@ -13,3 +13,6 @@ pub use texture::load_texture_from_png;
 pub use voxel_renderer::VoxelRenderer;
 pub use mesh::create_wireframe_mesh;
 const VERTEX_SIZE: usize = 6;
+
+pub use texture::load_texture_from_image_data;
+pub use mesh::create_ui_quad;

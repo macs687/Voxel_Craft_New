@@ -2,10 +2,10 @@ use std::path::Path;
 
 use gl::types::GLuint;
 use crate::{loger::ProjectErrors};
-use image::{GenericImageView};
+use image::{GenericImageView, RgbaImage};
 
 pub struct Texture {
-    id: GLuint
+    pub id: GLuint
 }
 
 
@@ -67,4 +67,39 @@ pub fn load_texture_from_png(path: &str) -> Result<Texture, ProjectErrors> {
 
     let texture = Texture::new(id);
     Ok(texture)
+}
+
+
+pub fn load_texture_from_image_data(img: &RgbaImage) -> Result<Texture, ProjectErrors> {
+    let (width, height) = img.dimensions();
+    if width == 0 || height == 0 {
+        return Err(ProjectErrors::TextureCreationError { 
+            log: "Изображение имеет нулевой размер".to_string(), 
+        });
+    }
+
+    let data = img.clone().into_raw();
+    let mut id = 0;
+
+    unsafe {
+        gl::GenTextures(1, &mut id);
+        gl::BindTexture(gl::TEXTURE_2D, id);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
+        gl::TexImage2D(
+            gl::TEXTURE_2D,
+            0,
+            gl::RGBA as i32,
+            width as i32,
+            height as i32,
+            0,
+            gl::RGBA,
+            gl::UNSIGNED_BYTE,
+            data.as_ptr() as *const _,
+        );
+    }
+
+    Ok(Texture::new(id))
 }

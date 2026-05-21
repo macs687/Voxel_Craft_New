@@ -38,3 +38,6 @@ pub const PLAYER_HEIGHT: f32 = 1.8;
 pub const BASE_PLAYER_EYE_HEIGHT: f32 = 2.0;
 pub const GRAVITY: f32 = -25.0;
 pub const JUMP_FORCE: f32 = 8.0;
+
+
+pub const CREATIVE_VERTICAL_MOVE: f32 = 0.1;

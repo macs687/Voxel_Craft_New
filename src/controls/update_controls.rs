@@ -1,22 +1,13 @@
+use crate::GameState;
 use crate::core::{Window, Events, Camera};
 use crate::constant::{KEY_A, KEY_D, KEY_ESC, KEY_LEFT_SHIFT, KEY_S, KEY_SPACE, KEY_TAB, KEY_W, LCM, PCM, KEY_F1};
 use crate::player::Player;
-use crate::settings::{MOUSE_SENSITIVITY, MOVE_SPEED, BLOCK_TYPES_NUMBER};
+use crate::settings::{BLOCK_TYPES_NUMBER, CREATIVE_VERTICAL_MOVE, JUMP_FORCE, MOUSE_SENSITIVITY, MOVE_SPEED};
 use glam::{Vec3, Quat};
 use glfw::Key;
 use crate::world::{RayHit, World};
 use crate::voxels::BlockType;
 use crate::graphics::{VoxelRenderer};
-
-
-pub fn update(events: &mut Events, window: &mut Window) {
-    if events.j_pressed(KEY_TAB) && events.cursor_in_window {
-        events.switch_cursor_mode(window);
-    } else if events.j_pressed(KEY_ESC) {
-        window.close();
-    }
-}
-
 
 
 pub fn update_moving(events: &mut Events, camera: &mut Camera, world: &mut World, delta_time: f32, renderer: &mut VoxelRenderer, hit: &Option<RayHit>, player: &mut Player) {
@@ -66,8 +57,22 @@ pub fn update_moving(events: &mut Events, camera: &mut Camera, world: &mut World
         direction = direction.normalize();
     }
 
-    if events.j_pressed(KEY_SPACE) {
-        player.velocity.y = 10.0;
+    if events.j_pressed(Key::F as i32) {
+        player.fly = !player.fly;
+    }
+
+    if events.pressed(KEY_SPACE) {
+        if player.fly {
+            player.position += Vec3::new(0.0, CREATIVE_VERTICAL_MOVE, 0.0);
+        } else {
+            player.velocity.y = JUMP_FORCE;
+        }
+    } else if events.pressed(KEY_LEFT_SHIFT) {
+        if player.fly {
+            player.position += Vec3::new(0.0, -CREATIVE_VERTICAL_MOVE, 0.0);
+        } else {
+            // включить приседание
+        }
     }
 
 

@@ -1,3 +1,5 @@
+use core::error;
+
 use thiserror::Error;
 
 
@@ -50,6 +52,12 @@ pub enum ProjectErrors {
         #[source]
         source: image::ImageError,
     },
+
+    #[error("Ошибка создания изображения из RgbaImage: {log}")]
+    TextureCreationError {
+        //#[source]
+        log: String
+    }
 }
 
 

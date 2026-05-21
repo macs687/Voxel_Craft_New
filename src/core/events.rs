@@ -14,8 +14,8 @@ pub struct Events {
     current: u32,
     pub delta_x: f32,
     pub delta_y: f32,
-    x: f64,
-    y: f64,
+    pub x: f64,
+    pub y: f64,
     pub cursor_locked: bool,
     cursor_started: bool,
     pub cursor_in_window: bool

@@ -162,3 +162,52 @@ pub fn create_wireframe_mesh() -> Mesh {
 //         }
 //     }
 // }
+
+
+
+pub fn create_ui_quad() -> GLuint {
+    let vertices: [f32; 16] = [
+        // x, y, u, v
+        -1.0, -1.0, 0.0, 0.0,
+         1.0, -1.0, 1.0, 0.0,
+         1.0,  1.0, 1.0, 1.0,
+        -1.0,  1.0, 0.0, 1.0,
+    ];
+    let indices: [u32; 6] = [0,1,2, 0,2,3];
+
+    let (mut vao, mut vbo, mut ebo) = (0,0,0);
+    unsafe {
+        gl::GenVertexArrays(1, &mut vao);
+        gl::GenBuffers(1, &mut vbo);
+        gl::GenBuffers(1, &mut ebo);
+
+        gl::BindVertexArray(vao);
+        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+        gl::BufferData(
+            gl::ARRAY_BUFFER,
+            (vertices.len() * std::mem::size_of::<f32>()) as _,
+            vertices.as_ptr() as *const _,
+            gl::STATIC_DRAW,
+        );
+        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
+        gl::BufferData(
+            gl::ELEMENT_ARRAY_BUFFER,
+            (indices.len() * std::mem::size_of::<u32>()) as _,
+            indices.as_ptr() as *const _,
+            gl::STATIC_DRAW,
+        );
+
+        let stride = 4 * std::mem::size_of::<f32>() as i32;
+        // Позиция (location = 0) – 2 float
+        gl::VertexAttribPointer(0, 2, gl::FLOAT, gl::FALSE, stride, std::ptr::null());
+        gl::EnableVertexAttribArray(0);
+        // UV (location = 1) – 2 float, смещение 2 float
+        let uv_offset = (2 * std::mem::size_of::<f32>()) as *const std::ffi::c_void;
+        gl::VertexAttribPointer(1, 2, gl::FLOAT, gl::FALSE, stride, uv_offset);
+        gl::EnableVertexAttribArray(1);
+
+        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
+        gl::BindVertexArray(0);
+    }
+    vao
+}

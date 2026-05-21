@@ -20,7 +20,9 @@ pub struct Player {
     /// На земле ли игрок (определяется при проверке коллизий)
     pub on_ground: bool,
     /// текущий блок в руке
-    pub selected_block: BlockType
+    pub selected_block: BlockType,
+    /// полёт
+    pub fly: bool
 }
 
 
@@ -34,7 +36,8 @@ impl Player {
             height: PLAYER_HEIGHT,
             eye_height: BASE_PLAYER_EYE_HEIGHT,
             on_ground: true,
-            selected_block: BlockType::Planks
+            selected_block: BlockType::Planks,
+            fly: false
         }
     }
 
@@ -119,7 +122,10 @@ impl Player {
 
 
     pub fn update_moving(&mut self, world: &World, move_dir: Vec3, jump: bool, delta: f32) -> Vec3 {
-        self.velocity.y += GRAVITY * delta;
+        if !self.fly {
+            self.velocity.y += GRAVITY * delta;
+        }
+
         self.velocity.x = move_dir.x * MOVE_SPEED;
         self.velocity.z = move_dir.z * MOVE_SPEED;
         

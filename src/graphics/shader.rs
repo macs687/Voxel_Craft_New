@@ -62,6 +62,17 @@ impl Shader {
             }
         }
     }
+
+
+    pub fn uniform_vec2(&self, name: &str, x: f32, y: f32) {
+        unsafe {
+            let c_name = CString::new(name).unwrap();
+            let location = gl::GetUniformLocation(self.id, c_name.as_ptr());
+            if location != -1 {
+                gl::Uniform2f(location, x, y);
+            }
+        }
+    }
 }
 
 
