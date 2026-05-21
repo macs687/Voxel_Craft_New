@@ -46,7 +46,12 @@ pub fn update_moving(events: &mut Events, camera: &mut Camera, world: &mut World
 
 
     // ДВИЖЕНИЕ
-    if events.pressed(KEY_W) { direction += camera.front; }
+    if events.pressed(KEY_W) { 
+        direction += camera.front;
+    }
+
+
+    
     if events.pressed(KEY_S) { direction -= camera.front; }
     if events.pressed(KEY_A) { direction -= camera.right; }
     if events.pressed(KEY_D) { direction += camera.right; }

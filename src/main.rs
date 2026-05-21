@@ -17,7 +17,9 @@ use crate::voxels::BlockType;
 use player::Player;
 use ui::Button;
 use graphics::create_ui_quad;
-
+use std::sync::mpsc;
+use world::{ChunkRequest, ChunkResult};
+use world::chunk_loader_thread;
 
 mod assets;
 mod constant;
@@ -114,13 +116,6 @@ fn main() -> Result<(), ProjectErrors> {
             window.swap_buffers();
         }
 
-        // unsafe {
-        //     gl::Enable(gl::DEPTH_TEST);
-        //     gl::Enable(gl::CULL_FACE);
-        // }
-
-
-
 
         // ПРОМЕЖУТОЧНЫЙ ЭТАП (ЗАГРУЗКА МИРА)
         events.switch_cursor_mode(&mut window);
@@ -166,7 +161,7 @@ fn main() -> Result<(), ProjectErrors> {
             let hit = raycast(&world, camera.position, camera.front, RANGE as f32);
             update_moving(&mut events, &mut camera, &mut world, delta_time, &mut renderer, &hit, &mut player);
 
-            world_controller.generate_world(&camera, &mut world, &mut renderer);
+            world_controller.generate_world(&camera, &mut world);
 
             draw_world(&mut window, &shader, &camera, &texture, &world.chunks_meshes, &crosshair_shader, &crosshair_mesh, &line_shader, &cube_mesh, &hit);
         }

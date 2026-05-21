@@ -124,10 +124,12 @@ impl Player {
     pub fn update_moving(&mut self, world: &World, move_dir: Vec3, jump: bool, delta: f32) -> Vec3 {
         if !self.fly {
             self.velocity.y += GRAVITY * delta;
+        } else {
+            self.velocity.x = move_dir.x * 50.0;
+            self.velocity.z = move_dir.z * 50.0;
         }
 
-        self.velocity.x = move_dir.x * MOVE_SPEED;
-        self.velocity.z = move_dir.z * MOVE_SPEED;
+        
         
         if jump && self.on_ground {
             self.velocity.y = JUMP_FORCE;

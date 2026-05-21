@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use glam::{I16Vec3, Vec3, IVec3};
-use crate::{graphics::VoxelRenderer, settings::{CHUNK_D, CHUNK_H, CHUNK_W, MAX_STEPS, RENDER_DIST, SEED}, voxels::{BlockType, Chunk}};
-
+use crate::{graphics::VoxelRenderer, settings::{CHUNK_D, CHUNK_H, CHUNK_W, MAX_STEPS, RENDER_DIST, SEED}, voxels::{BlockType, Chunk}, world::chunks_loader::ChunkRequest};
+use std::sync::mpsc::Sender;
 
 use crate::graphics::Mesh;
 
@@ -148,7 +148,7 @@ impl World {
     }
 
 
-    pub fn update_world(&mut self, player_cx: i32, player_cz: i32) {
+    pub fn update_world(&mut self, player_cx: i32, player_cz: i32, request_tx: &Sender<ChunkRequest>) {
         let mut required = HashSet::new();
 
         for dx in -RENDER_DIST..RENDER_DIST {
@@ -159,8 +159,27 @@ impl World {
 
         self.chunks.retain(|&(cx, cy, cz), _| required.contains(&(cx, cy, cz)));
 
-        for &(cx, cy, cz) in &required {
-            self.load_chunk(cx, cy, cz);
+        for coord in &required {
+            if !self.chunks.contains_key(coord) {
+                let mut neighbors = HashMap::new();
+
+                for (dx, dy, dz) in &[(1,0,0), (-1,0,0), (0,1,0), (0,-1,0), (0,0,1), (0,0,-1)] {
+                    let neighbor_coord = (coord.0 + dx, coord.1 + dy, coord.2 + dz);
+                    if let Some(chunk) = self.chunks.get(&neighbor_coord) {
+                        // Копируем массив блоков
+                        let blocks_copy = chunk.blocks.clone();
+                        neighbors.insert(neighbor_coord, blocks_copy);
+                    }
+                }
+
+                let request = ChunkRequest {
+                    coord: *coord,
+                    neighbors,
+                    seed: SEED
+                };
+
+                request_tx.send(request).expect("Failed to send chunk");
+            }
         }
 
         if self.chunks.is_empty() {

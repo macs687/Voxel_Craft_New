@@ -30,7 +30,7 @@ pub const MAX_STEPS: i32 = 30;
 pub const RANGE: i32 = 7;
 
 /// дальность прорисовки
-pub const RENDER_DIST: i32 = 4;
+pub const RENDER_DIST: i32 = 8;
 
 
 pub const PLAYER_WIDTH: f32 = 0.6;

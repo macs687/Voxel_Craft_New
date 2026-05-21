@@ -1,15 +1,15 @@
 use crate::{graphics::mesh::Mesh, settings::{CHUNK_D, CHUNK_H, CHUNK_W}, voxels::{BlockType, Chunk}, world::World};
 
+
+
+
 const ATLAS_COLS: f32 = 16.0;   // количество столбцов в атласе
 const ATLAS_ROWS: f32 = 16.0;   // количество строк
 const TILE_SIZE: f32 = 1.0 / 16.0; // размер одного тайла в UV‑координатах (0..1)
 
 
-
-
-
 pub struct VoxelRenderer {
-    buffer: Vec<f32>
+    pub buffer: Vec<f32>
 }
 
 
@@ -17,62 +17,65 @@ impl VoxelRenderer {
     pub fn init() -> Self {
         Self { buffer: Vec::new() }
     }
-    
+
 
     pub fn render(&mut self, chunk: &Chunk, chunk_x: i32, chunk_y: i32, chunk_z: i32, world: &World) -> Mesh {
+        let get_block = &|wx, wy, wz| world.get_block(wx, wy, wz);
+        self.render_to_buffer(chunk, chunk_x, chunk_y, chunk_z, get_block);
+        Mesh::new(&self.buffer)
+    }
+
+
+    pub fn render_to_buffer<F>(&mut self, chunk: &Chunk, chunk_x: i32, chunk_y: i32, chunk_z: i32, get_block: &F) where F: Fn(i32, i32, i32) -> Option<BlockType> {
         self.buffer.clear();
 
         for y in 0..CHUNK_H {
             for z in 0..CHUNK_D {
                 for x in 0..CHUNK_W {
                     let block = chunk.blocks[y][z][x];
-
-                    let block_id = block as i32 as f32;
-
                     if block == BlockType::Air {
                         continue;
                     }
 
-                    let gx = chunk_x * CHUNK_W as i32 + x as i32;
-                    let gy = chunk_y * CHUNK_H as i32 + y as i32;
-                    let gz = chunk_z * CHUNK_D as i32 + z as i32;
+                    let gx = chunk_x * CHUNK_W as i32  + x as i32;
+                    let gy = chunk_y * CHUNK_H as i32  + y as i32;
+                    let gz = chunk_z * CHUNK_D as i32  + z as i32;
 
-                    let cx = x as f32;
-                    let cy = y as f32;
-                    let cz = z as f32;
-                    let s = 0.5; // половина размера блока
+                    let lx = x as f32;
+                    let ly = y as f32;
+                    let lz = z as f32;
+                    let s = 0.5;
 
                     let faces = [
-                        ( 1,  0,  0), // право
-                        (-1,  0,  0), // лево
-                        ( 0,  1,  0), // верх
-                        ( 0, -1,  0), // низ
-                        ( 0,  0,  1), // перед (z+)
-                        ( 0,  0, -1), // зад (z-)
+                        (1, 0, 0),
+                        (-1, 0, 0),
+                        (0, 1, 0),
+                        (0, -1, 0),
+                        (0, 0, 1),
+                        (0, 0, -1),
                     ];
 
                     for &(dx, dy, dz) in &faces {
-                        let ngx = gx as isize + dx as isize;
-                        let ngy = gy as isize + dy as isize;
-                        let ngz = gz as isize + dz as isize;
+                        let ngx = (gx as isize + dx as isize) as i32;
+                        let ngy = (gy as isize + dy as isize) as i32;
+                        let ngz = (gz as isize + dz as isize) as i32;
 
-                        let neighbor = world.get_block(ngx as i32, ngy as i32, ngz as i32);
+                        let neighbor = get_block(ngx, ngy, ngz);
                         let visible = neighbor.map_or(true, |b| b == BlockType::Air);
-                        
+
                         if visible {
-                            add_face(&mut self.buffer, cx, cy, cz, s, (dx, dy, dz), block_id);
+                            let block_id = block as i32 as f32;
+                            add_face(&mut self.buffer, lx, ly, lz, s, (dx, dy, dz), block_id);
                         }
                     }
-                }   
+                }
             }
         }
-
-        Mesh::new(&self.buffer)
     }
 }
 
 
-fn add_face(buffer: &mut Vec<f32>, cx: f32, cy: f32, cz: f32, s: f32, dir: (i32, i32, i32), texture: f32) {
+fn add_face(buffer: &mut Vec<f32>, lx: f32, ly: f32, lz: f32, s: f32, dir: (i32, i32, i32), texture: f32) {
     let col = texture as i32 % 16;
     let row = texture as i32 / 16;
     let u_min = col as f32 * TILE_SIZE;
@@ -88,57 +91,57 @@ fn add_face(buffer: &mut Vec<f32>, cx: f32, cy: f32, cz: f32, s: f32, dir: (i32,
 
 
     let (v0, v1, v2, v3): ((f32, f32, f32), (f32, f32, f32), (f32, f32, f32), (f32, f32, f32)) = match dir {
-        ( 1,  0,  0) => ( // право (+x)
-            (cx + s, cy - s, cz - s),
-            (cx + s, cy - s, cz + s),
-            (cx + s, cy + s, cz + s),
-            (cx + s, cy + s, cz - s),
+        ( 1,  0,  0 ) => ( // право (+x)
+            (lx + s, ly - s, lz - s),
+            (lx + s, ly - s, lz + s),
+            (lx + s, ly + s, lz + s),
+            (lx + s, ly + s, lz - s),
         ),
-        (-1,  0,  0) => ( // лево (-x)
-            (cx - s, cy - s, cz + s),
-            (cx - s, cy - s, cz - s),
-            (cx - s, cy + s, cz - s),
-            (cx - s, cy + s, cz + s),
+        ( -1,  0,  0 ) => ( // лево (-x)
+            (lx - s, ly - s, lz + s),
+            (lx - s, ly - s, lz - s),
+            (lx - s, ly + s, lz - s),
+            (lx - s, ly + s, lz + s),
         ),
-        ( 0,  1,  0) => ( // верх (+y)
-            (cx - s, cy + s, cz - s),
-            (cx + s, cy + s, cz - s),
-            (cx + s, cy + s, cz + s),
-            (cx - s, cy + s, cz + s),
+        ( 0,  1,  0 ) => ( // верх (+y)
+            (lx - s, ly + s, lz - s),
+            (lx + s, ly + s, lz - s),
+            (lx + s, ly + s, lz + s),
+            (lx - s, ly + s, lz + s),
         ),
-        ( 0, -1,  0) => ( // низ (-y)
-            (cx - s, cy - s, cz + s),
-            (cx + s, cy - s, cz + s),
-            (cx + s, cy - s, cz - s),
-            (cx - s, cy - s, cz - s),
+        ( 0, -1,  0 ) => ( // низ (-y)
+            (lx - s, ly - s, lz + s),
+            (lx + s, ly - s, lz + s),
+            (lx + s, ly - s, lz - s),
+            (lx - s, ly - s, lz - s),
         ),
-        ( 0,  0,  1) => ( // перед (+z)
-            (cx - s, cy - s, cz + s),
-            (cx + s, cy - s, cz + s),
-            (cx + s, cy + s, cz + s),
-            (cx - s, cy + s, cz + s),
+        ( 0,  0,  1 ) => ( // перед (+z)
+            (lx - s, ly - s, lz + s),
+            (lx + s, ly - s, lz + s),
+            (lx + s, ly + s, lz + s),
+            (lx - s, ly + s, lz + s),
         ),
-        ( 0,  0, -1) => ( // зад (-z)
-            (cx + s, cy - s, cz - s),
-            (cx - s, cy - s, cz - s),
-            (cx - s, cy + s, cz - s),
-            (cx + s, cy + s, cz - s),
+        ( 0,  0, -1 ) => ( // зад (-z)
+            (lx + s, ly - s, lz - s),
+            (lx - s, ly - s, lz - s),
+            (lx - s, ly + s, lz - s),
+            (lx + s, ly + s, lz - s),
         ),
         _ => return,
     };
 
     // Первый треугольник: v0, v1, v2
-    push_vertex(buffer, v0.0, v0.1, v0.2, uv00.0, uv00.1, texture);
-    push_vertex(buffer, v1.0, v1.1, v1.2, uv10.0, uv10.1, texture);
-    push_vertex(buffer, v2.0, v2.1, v2.2, uv11.0, uv11.1, texture);
+    vertex(buffer, v0.0, v0.1, v0.2, uv00.0, uv00.1, texture);
+    vertex(buffer, v1.0, v1.1, v1.2, uv10.0, uv10.1, texture);
+    vertex(buffer, v2.0, v2.1, v2.2, uv11.0, uv11.1, texture);
     // Второй треугольник: v0, v2, v3
-    push_vertex(buffer, v0.0, v0.1, v0.2, uv00.0, uv00.1, texture);
-    push_vertex(buffer, v2.0, v2.1, v2.2, uv11.0, uv11.1, texture);
-    push_vertex(buffer, v3.0, v3.1, v3.2, uv01.0, uv01.1, texture);
+    vertex(buffer, v0.0, v0.1, v0.2, uv00.0, uv00.1, texture);
+    vertex(buffer, v2.0, v2.1, v2.2, uv11.0, uv11.1, texture);
+    vertex(buffer, v3.0, v3.1, v3.2, uv01.0, uv01.1, texture);
 }
 
 
-fn push_vertex(buffer: &mut Vec<f32>, x: f32, y: f32, z: f32, u: f32, v: f32, texture: f32) {
+fn vertex(buffer: &mut Vec<f32>, x: f32, y: f32, z: f32, u: f32, v: f32, texture: f32) {
     buffer.push(x);
     buffer.push(y);
     buffer.push(z);
