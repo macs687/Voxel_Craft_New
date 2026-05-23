@@ -22,9 +22,9 @@ impl Button {
     pub fn new(text: &str, x: f32, y: f32, width: f32, height: f32) -> Result<Self, ProjectErrors> {
         let img = fonts::rasterize_text(text);
         let invert_img = imageops::flip_vertical(&img);
-        println!("Rasterized '{}' size: {}x{}", text, img.width(), img.height());
+        //println!("Rasterized '{}' size: {}x{}", text, img.width(), img.height());
         let texture = load_texture_from_image_data(&invert_img)?;
-        println!("Texture id for '{}': {}", text, texture.id);
+        //println!("Texture id for '{}': {}", text, texture.id);
 
         Ok(Self { 
             text: text.to_string(), 

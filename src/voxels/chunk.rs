@@ -17,7 +17,7 @@ impl Chunk {
         let ptr = Box::into_raw(boxed_slice) as *mut [[[BlockType; CHUNK_W]; CHUNK_D]; CHUNK_H];
         let boxed = unsafe { Box::from_raw(ptr) };
 
-        println!("Chunk dimensions: W={}, H={}, D={}", CHUNK_W, CHUNK_H, CHUNK_D);
+        //println!("Chunk dimensions: W={}, H={}, D={}", CHUNK_W, CHUNK_H, CHUNK_D);
 
         Chunk { blocks: boxed }
     }

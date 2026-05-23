@@ -43,3 +43,43 @@ pub const JUMP_FORCE: f32 = 8.0;
 pub const CREATIVE_VERTICAL_MOVE: f32 = 0.1;
 pub const CREATIVE_HORIZONTAL_SPEED: f32 = 70.0;
 pub const PERMISION_TEXTURE: u32 = 16;
+
+
+use std::fs;
+use std::path::Path;
+use serde::{Serialize, Deserialize};
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Settings {
+    pub mouse_sensitivity: f32,
+    pub volume: f32,
+}
+
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            mouse_sensitivity: 0.1,
+            volume: 1.0,
+        }
+    }
+}
+
+
+impl Settings {
+    const PATH: &str = "res/settings.toml";   // <-- обновлённый путь
+
+    pub fn load() -> Self {
+        if Path::new(Self::PATH).exists() {
+            let data = fs::read_to_string(Self::PATH).expect("Unable to read settings file");
+            toml::from_str(&data).unwrap_or_default()
+        } else {
+            Settings::default()
+        }
+    }
+
+    pub fn save(&self) {
+        let data = toml::to_string_pretty(self).expect("Failed to serialize settings");
+        fs::write(Self::PATH, data).expect("Unable to write settings file");
+    }
+}

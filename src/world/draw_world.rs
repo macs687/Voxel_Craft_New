@@ -4,7 +4,7 @@ use crate::graphics::{Mesh, Shader, Texture};
 use crate::settings::{CHUNK_D, CHUNK_H, CHUNK_W};
 use crate::world::{ChunkCoord, RayHit};
 use glam::{Mat4, Vec3};
-use crate::ui::Button;
+
 
 pub fn draw_world(window: &mut Window, shader: &Shader, camera: &Camera, texture: &Texture, chunk_meshes: &HashMap<ChunkCoord, Mesh>, crosshair_shader: &Shader, crosshair_mesh: &Mesh, line_shader: &Shader, cube_mesh: &Mesh, hit: &Option<RayHit>) {
     window.gl_clear();
@@ -85,26 +85,4 @@ pub fn draw_world(window: &mut Window, shader: &Shader, camera: &Camera, texture
     }
 
     window.swap_buffers();
-}
-
-
-fn draw_button(button: &Button, shader: &Shader, ui_quad_vao: u32) {
-    shader.use_shader();
-    button.texture.bind(0);
-    shader.uniform_texture("uTexture", 0);
-
-    let model = Mat4::from_translation(Vec3::new(button.x, button.y, 0.0)) * Mat4::from_scale(Vec3::new(button.width, button.height, 1.0));
-
-    shader.uniform_matrix("uModel", model);
-    shader.uniform_matrix("uView", Mat4::IDENTITY);
-    shader.uniform_matrix("uProjection", Mat4::IDENTITY);
-
-    // Используем тот же quad VAO, что для прицела, но с UV-атрибутом.
-    // У прицела VAO только позиция (2 float), а нам нужен VAO с UV (2 float pos + 2 float uv).
-    // Поэтому создадим отдельный VAO для UI quad.
-    unsafe {
-        gl::BindVertexArray(ui_quad_vao);
-        gl::DrawArrays(gl::TRIANGLES, 0, 6);
-        gl::BindVertexArray(0);
-    }
 }
