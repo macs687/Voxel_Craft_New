@@ -1,4 +1,4 @@
-use crate::voxels::CHUNK_VOLUME;
+use crate::{mods::BlocksManager, voxels::CHUNK_VOLUME};
 use super::block::BlockType;
 use crate::settings::{CHUNK_D, CHUNK_H, CHUNK_W};
 use noise::{NoiseFn, Perlin};
@@ -39,7 +39,9 @@ impl Chunk {
     }
 
 
-    pub fn generate_terrain(&mut self, chunk_x: i32, chunk_y: i32, chunk_z: i32, seed: u32) {
+    pub fn generate_terrain(&mut self, chunk_x: i32, chunk_y: i32, chunk_z: i32, seed: u32, blocks_manager: &BlocksManager) {
+
+
         let perlin = Perlin::new(seed);
 
         let scale = 30.0;          // масштаб шума (чем меньше, тем круче холмы)
@@ -57,9 +59,11 @@ impl Chunk {
 
                 for y in 0..CHUNK_H {
                     let block = if (y as i32) < surface_y {
-                        BlockType::Dirt
+                        let id = blocks_manager.get_id(&"dirt".to_string());
+                        BlockType::Custom(id.unwrap_or(0))
                     } else if (y as i32) == surface_y {
-                        BlockType::Planks
+                        let id = blocks_manager.get_id(&"grass".to_string());
+                        BlockType::Custom(id.unwrap_or(0))
                     } else {
                         BlockType::Air
                     };

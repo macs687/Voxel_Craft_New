@@ -30,7 +30,7 @@ pub const MAX_STEPS: i32 = 30;
 pub const RANGE: i32 = 7;
 
 /// дальность прорисовки
-pub const RENDER_DIST: i32 = 8;
+pub const RENDER_DIST: i32 = 16;
 
 
 pub const PLAYER_WIDTH: f32 = 0.6;
@@ -41,3 +41,5 @@ pub const JUMP_FORCE: f32 = 8.0;
 
 
 pub const CREATIVE_VERTICAL_MOVE: f32 = 0.1;
+pub const CREATIVE_HORIZONTAL_SPEED: f32 = 70.0;
+pub const PERMISION_TEXTURE: u32 = 16;

@@ -1,6 +1,6 @@
-use std::collections::{HashMap, HashSet};
+use std::{collections::{HashMap, HashSet}, sync::Arc};
 use glam::{I16Vec3, Vec3, IVec3};
-use crate::{graphics::VoxelRenderer, settings::{CHUNK_D, CHUNK_H, CHUNK_W, MAX_STEPS, RENDER_DIST, SEED}, voxels::{BlockType, Chunk}, world::chunks_loader::ChunkRequest};
+use crate::{graphics::VoxelRenderer, mods::BlocksManager, settings::{CHUNK_D, CHUNK_H, CHUNK_W, MAX_STEPS, RENDER_DIST, SEED}, voxels::{BlockType, Chunk}, world::chunks_loader::ChunkRequest};
 use std::sync::mpsc::Sender;
 
 use crate::graphics::Mesh;
@@ -40,11 +40,11 @@ impl World {
     }
 
 
-    pub fn load_chunk(&mut self, cx: i32, cy: i32, cz: i32) {
+    pub fn load_chunk(&mut self, cx: i32, cy: i32, cz: i32, blocks_manager: &BlocksManager) {
         println!("Попытка загрузить чанк ({}, {}, {})", cx, cy, cz);
         if !self.chunks.contains_key(&(cx, cy, cz)) {
             let mut chunk = Chunk::new();
-            chunk.generate_terrain(cx, 0, cz, SEED);
+            chunk.generate_terrain(cx, 0, cz, SEED, blocks_manager);
             self.chunks.insert((cx, cy, cz), chunk);
             println!("Чанк ({}, {}, {}) добавлен. Всего чанков: {}", cx, cy, cz, self.chunks.len());
         } else {
@@ -53,10 +53,10 @@ impl World {
     }
 
 
-    pub fn generate_start_landscape(&mut self) {
+    pub fn generate_start_landscape(&mut self, blocks_manager: &BlocksManager) {
         for cx in -1..1 {
             for cz in -1..1 {
-                self.load_chunk(cx, 0, cz);
+                self.load_chunk(cx, 0, cz, blocks_manager);
             }
         }
     }
@@ -89,7 +89,17 @@ impl World {
             let lz = z.rem_euclid(CHUNK_D as i32) as usize;
 
             chunk.set_block(lx, ly, lz, block);
-        };
+        }
+    }
+
+
+    /// Устанавливает блок по имени. Если имя не найдено в реестре, ничего не делает.
+    pub fn set_block_by_name(&mut self, x: i32, y: i32, z: i32, name: &String, blocks_manager: &BlocksManager) {
+        if let Some(id) = blocks_manager.get_id(name) {
+            self.set_block(x, y, z, BlockType::Custom(id));
+        } else {
+            println!("блока {name} не существует")
+        }
     }
 
 
@@ -114,11 +124,11 @@ impl World {
     }  
 
 
-    pub fn update(&mut self, block_pos: (i32, i32, i32), renderer: &mut VoxelRenderer) {
+    pub fn update(&mut self, block_pos: (i32, i32, i32), renderer: &mut VoxelRenderer, blocks_manager: &BlocksManager) {
         let to_rebuild = self.calculete_meshes(block_pos);
         for coord in to_rebuild {
             if let Some(chunk) = self.chunks.get(&coord) {
-                let new_mesh = renderer.render(chunk, coord.0, coord.1, coord.2, &self);
+                let new_mesh = renderer.render(chunk, coord.0, coord.1, coord.2, &self, blocks_manager);
 
                 let new_chunk_mesh = Mesh {
                     vao: new_mesh.vao,
@@ -148,7 +158,7 @@ impl World {
     }
 
 
-    pub fn update_world(&mut self, player_cx: i32, player_cz: i32, request_tx: &Sender<ChunkRequest>) {
+    pub fn update_world(&mut self, player_cx: i32, player_cz: i32, request_tx: &Sender<ChunkRequest>, blocks_manager: &Arc<BlocksManager>,) {
         let mut required = HashSet::new();
 
         for dx in -RENDER_DIST..RENDER_DIST {
@@ -175,7 +185,8 @@ impl World {
                 let request = ChunkRequest {
                     coord: *coord,
                     neighbors,
-                    seed: SEED
+                    seed: SEED,
+                    blocks_manager: blocks_manager.clone()
                 };
 
                 request_tx.send(request).expect("Failed to send chunk");

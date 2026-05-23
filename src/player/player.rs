@@ -1,5 +1,5 @@
 use glam::Vec3;
-use crate::settings::{PLAYER_WIDTH, PLAYER_HEIGHT, BASE_PLAYER_EYE_HEIGHT, GRAVITY, MOVE_SPEED, JUMP_FORCE};
+use crate::settings::{BASE_PLAYER_EYE_HEIGHT, CREATIVE_HORIZONTAL_SPEED, GRAVITY, JUMP_FORCE, MOVE_SPEED, PLAYER_HEIGHT, PLAYER_WIDTH};
 use crate::world::World;
 use crate::physics::Hitbox;
 use crate::BlockType;
@@ -20,7 +20,7 @@ pub struct Player {
     /// На земле ли игрок (определяется при проверке коллизий)
     pub on_ground: bool,
     /// текущий блок в руке
-    pub selected_block: BlockType,
+    pub selected_block: String,
     /// полёт
     pub fly: bool
 }
@@ -36,7 +36,7 @@ impl Player {
             height: PLAYER_HEIGHT,
             eye_height: BASE_PLAYER_EYE_HEIGHT,
             on_ground: true,
-            selected_block: BlockType::Planks,
+            selected_block: "Planks".to_string(),
             fly: false
         }
     }
@@ -124,11 +124,12 @@ impl Player {
     pub fn update_moving(&mut self, world: &World, move_dir: Vec3, jump: bool, delta: f32) -> Vec3 {
         if !self.fly {
             self.velocity.y += GRAVITY * delta;
+            self.velocity.x = move_dir.x * MOVE_SPEED;
+            self.velocity.z = move_dir.z * MOVE_SPEED;
         } else {
-            self.velocity.x = move_dir.x * 50.0;
-            self.velocity.z = move_dir.z * 50.0;
+            self.velocity.x = move_dir.x * CREATIVE_HORIZONTAL_SPEED;
+            self.velocity.z = move_dir.z * CREATIVE_HORIZONTAL_SPEED;
         }
-
         
         
         if jump && self.on_ground {

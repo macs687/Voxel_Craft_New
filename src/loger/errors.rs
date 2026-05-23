@@ -57,7 +57,17 @@ pub enum ProjectErrors {
     TextureCreationError {
         //#[source]
         log: String
-    }
+    },
+
+    #[error("Ошибка загрузки блока из {pack}: {log}")]
+    BlockLoaderError {
+        pack: String,
+        //#[source]
+        log: String
+    },
+
+    #[error("Некорректное имя файла: {0}")]
+    InvalidFileName(String),
 }
 
 

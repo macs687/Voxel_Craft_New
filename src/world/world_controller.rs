@@ -1,9 +1,11 @@
+use crate::mods::BlocksManager;
 use crate::{core::Camera, graphics::VoxelRenderer, world::World};
 use crate::graphics::Mesh;
 use crate::settings::{CHUNK_D, CHUNK_H, CHUNK_W};
 use super::world::ChunkCoord;
 use crate::world::{ChunkRequest, ChunkResult};
 use std::result;
+use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 use super::chunk_loader_thread;
@@ -32,15 +34,15 @@ impl WorldController {
     }
 
 
-    pub fn create_world(&self, renderer: &mut VoxelRenderer) -> World {
+    pub fn create_world(&self, renderer: &mut VoxelRenderer, blocks_manager: &BlocksManager) -> World {
         let mut world = World::create();
-        world.generate_start_landscape();
+        world.generate_start_landscape(blocks_manager);
 
         let len = world.chunks.len();
         println!("Чанков {len}");
 
         for (&(cx, cy, cz), chunk) in &world.chunks {
-            let mesh = renderer.render(chunk, cx, cy, cz, &world);
+            let mesh = renderer.render(chunk, cx, cy, cz, &world, blocks_manager);
             world.chunks_meshes.insert((cx, cy, cz), Mesh {
                 vao: mesh.vao,
                 vbo: mesh.vbo,
@@ -52,13 +54,13 @@ impl WorldController {
     }
 
 
-    pub fn generate_world(&mut self, camera: &Camera, world: &mut World) {
+    pub fn generate_world(&mut self, camera: &Camera, world: &mut World, blocks_manager: &BlocksManager, arc_blocks_manager: &Arc<BlocksManager>) {
         let player_cx = (camera.position.x / CHUNK_W as f32).floor() as i32;
         let player_cz = (camera.position.z / CHUNK_D as f32).floor() as i32;
 
         if player_cx != self.last_player_chunk.0 || player_cz != self.last_player_chunk.1 {
             self.last_player_chunk = (player_cx, player_cz);
-            world.update_world(player_cx, player_cz, &self.request_tx);
+            world.update_world(player_cx, player_cz, &self.request_tx, arc_blocks_manager);
         }
 
         while let Ok(result) = self.result_rx.try_recv() {

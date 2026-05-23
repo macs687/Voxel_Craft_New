@@ -12,15 +12,19 @@ use world::raycast;
 use world::draw_world;
 use world::WorldController;
 use crate::constant::{KEY_ESC, LCM};
-use crate::settings::RANGE;
+use crate::mods::BlocksManager;
+use crate::settings::{PERMISION_TEXTURE, RANGE};
 use crate::voxels::BlockType;
 use player::Player;
 use ui::Button;
 use graphics::create_ui_quad;
-use std::sync::mpsc;
+use std::sync::{Arc, mpsc};
 use world::{ChunkRequest, ChunkResult};
 use world::chunk_loader_thread;
 
+
+
+mod mods;
 mod assets;
 mod constant;
 mod settings;
@@ -53,6 +57,12 @@ fn main() -> Result<(), ProjectErrors> {
     let mut events = Events::init();
     events.setting(&mut window);
     println!("Инициализация обработчика событий завершена");
+
+    println!("инициализация менеджера блоков");
+    let mut blocks_manager = BlocksManager::init("res/textures/atlas.png", "res/textures/blocks", PERMISION_TEXTURE)?;
+    blocks_manager.build_atlas();
+    let blocks_manager = Arc::new(blocks_manager);
+    println!("инициализация менеджера блоков завершена");
 
     println!("загрузка шейдеров");
     let shader = load_shader("res/shaders/vertex_shader.glsl", "res/shaders/fragment_shader.glsl")?;
@@ -121,7 +131,7 @@ fn main() -> Result<(), ProjectErrors> {
         events.switch_cursor_mode(&mut window);
 
         println!("загрузка текстуры");
-        let texture = load_texture_from_png("res/textures/block.png")?;
+        let texture = load_texture_from_png("res/textures/atlas.png")?;
         println!("загрузка текстуры: ок");
 
         println!("инициализация рендер движка");
@@ -130,7 +140,7 @@ fn main() -> Result<(), ProjectErrors> {
 
         println!("Создание мира");
         let mut world_controller = WorldController::init();
-        let mut world = world_controller.create_world(&mut renderer);
+        let mut world = world_controller.create_world(&mut renderer, &blocks_manager);
         println!("Создание мира: ок");
 
         let crosshair_mesh = create_crosshair_mesh();
@@ -159,9 +169,9 @@ fn main() -> Result<(), ProjectErrors> {
             last_frame = now;
 
             let hit = raycast(&world, camera.position, camera.front, RANGE as f32);
-            update_moving(&mut events, &mut camera, &mut world, delta_time, &mut renderer, &hit, &mut player);
+            update_moving(&mut events, &mut camera, &mut world, delta_time, &mut renderer, &hit, &mut player, &blocks_manager);
 
-            world_controller.generate_world(&camera, &mut world);
+            world_controller.generate_world(&camera, &mut world, &blocks_manager, &blocks_manager);
 
             draw_world(&mut window, &shader, &camera, &texture, &world.chunks_meshes, &crosshair_shader, &crosshair_mesh, &line_shader, &cube_mesh, &hit);
         }

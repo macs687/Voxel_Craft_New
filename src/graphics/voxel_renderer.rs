@@ -1,7 +1,4 @@
-use crate::{graphics::mesh::Mesh, settings::{CHUNK_D, CHUNK_H, CHUNK_W}, voxels::{BlockType, Chunk}, world::World};
-
-
-
+use crate::{graphics::mesh::Mesh, mods::BlocksManager, settings::{CHUNK_D, CHUNK_H, CHUNK_W}, voxels::{BlockType, Chunk}, world::World};
 
 const ATLAS_COLS: f32 = 16.0;   // количество столбцов в атласе
 const ATLAS_ROWS: f32 = 16.0;   // количество строк
@@ -19,14 +16,19 @@ impl VoxelRenderer {
     }
 
 
-    pub fn render(&mut self, chunk: &Chunk, chunk_x: i32, chunk_y: i32, chunk_z: i32, world: &World) -> Mesh {
+    pub fn render(&mut self, chunk: &Chunk, chunk_x: i32, chunk_y: i32, chunk_z: i32, world: &World, blocks_manager: &BlocksManager) -> Mesh {
         let get_block = &|wx, wy, wz| world.get_block(wx, wy, wz);
-        self.render_to_buffer(chunk, chunk_x, chunk_y, chunk_z, get_block);
+        let get_uv = &|name: &str| blocks_manager.get_uv_by_name(name).unwrap_or([0.0; 4]);
+
+        self.render_to_buffer(chunk, chunk_x, chunk_y, chunk_z, blocks_manager, get_block, get_uv);
         Mesh::new(&self.buffer)
     }
 
 
-    pub fn render_to_buffer<F>(&mut self, chunk: &Chunk, chunk_x: i32, chunk_y: i32, chunk_z: i32, get_block: &F) where F: Fn(i32, i32, i32) -> Option<BlockType> {
+    pub fn render_to_buffer<F, G>(&mut self, chunk: &Chunk, chunk_x: i32, chunk_y: i32, chunk_z: i32, blocks_manager: &BlocksManager, get_block: &F, get_uv: &G) where 
+    F: Fn(i32, i32, i32) -> Option<BlockType>,
+    G: Fn(&str) -> [f32; 4]
+    {
         self.buffer.clear();
 
         for y in 0..CHUNK_H {
@@ -64,8 +66,9 @@ impl VoxelRenderer {
                         let visible = neighbor.map_or(true, |b| b == BlockType::Air);
 
                         if visible {
-                            let block_id = block as i32 as f32;
-                            add_face(&mut self.buffer, lx, ly, lz, s, (dx, dy, dz), block_id);
+                            let uv = get_uv(block.name(blocks_manager));
+                            let block_id = block.id();
+                            add_face(&mut self.buffer, lx, ly, lz, s, (dx, dy, dz), uv, block_id);
                         }
                     }
                 }
@@ -75,20 +78,12 @@ impl VoxelRenderer {
 }
 
 
-fn add_face(buffer: &mut Vec<f32>, lx: f32, ly: f32, lz: f32, s: f32, dir: (i32, i32, i32), texture: f32) {
-    let col = texture as i32 % 16;
-    let row = texture as i32 / 16;
-    let u_min = col as f32 * TILE_SIZE;
-    let v_min = 1.0 - (row + 1) as f32 * TILE_SIZE; // переворот Y, если нужно
-    let u_max = u_min + TILE_SIZE;
-    let v_max = v_min + TILE_SIZE;
-
-
+fn add_face(buffer: &mut Vec<f32>, lx: f32, ly: f32, lz: f32, s: f32, dir: (i32, i32, i32), uv: [f32; 4], block_id: u16) {
+    let [u_min, v_min, u_max, v_max] = uv;
     let uv00 = (u_min, v_min);
     let uv10 = (u_max, v_min);
     let uv11 = (u_max, v_max);
     let uv01 = (u_min, v_max);
-
 
     let (v0, v1, v2, v3): ((f32, f32, f32), (f32, f32, f32), (f32, f32, f32), (f32, f32, f32)) = match dir {
         ( 1,  0,  0 ) => ( // право (+x)
@@ -131,21 +126,21 @@ fn add_face(buffer: &mut Vec<f32>, lx: f32, ly: f32, lz: f32, s: f32, dir: (i32,
     };
 
     // Первый треугольник: v0, v1, v2
-    vertex(buffer, v0.0, v0.1, v0.2, uv00.0, uv00.1, texture);
-    vertex(buffer, v1.0, v1.1, v1.2, uv10.0, uv10.1, texture);
-    vertex(buffer, v2.0, v2.1, v2.2, uv11.0, uv11.1, texture);
+    vertex(buffer, v0.0, v0.1, v0.2, uv00.0, uv00.1, block_id as f32);
+    vertex(buffer, v1.0, v1.1, v1.2, uv10.0, uv10.1, block_id as f32);
+    vertex(buffer, v2.0, v2.1, v2.2, uv11.0, uv11.1, block_id as f32);
     // Второй треугольник: v0, v2, v3
-    vertex(buffer, v0.0, v0.1, v0.2, uv00.0, uv00.1, texture);
-    vertex(buffer, v2.0, v2.1, v2.2, uv11.0, uv11.1, texture);
-    vertex(buffer, v3.0, v3.1, v3.2, uv01.0, uv01.1, texture);
+    vertex(buffer, v0.0, v0.1, v0.2, uv00.0, uv00.1, block_id as f32);
+    vertex(buffer, v2.0, v2.1, v2.2, uv11.0, uv11.1, block_id as f32);
+    vertex(buffer, v3.0, v3.1, v3.2, uv01.0, uv01.1, block_id as f32);
 }
 
 
-fn vertex(buffer: &mut Vec<f32>, x: f32, y: f32, z: f32, u: f32, v: f32, texture: f32) {
+fn vertex(buffer: &mut Vec<f32>, x: f32, y: f32, z: f32, u: f32, v: f32, block_id: f32) {
     buffer.push(x);
     buffer.push(y);
     buffer.push(z);
     buffer.push(u);
     buffer.push(v);
-    buffer.push(texture);
+    buffer.push(block_id);
 }

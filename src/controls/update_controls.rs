@@ -1,6 +1,7 @@
 use crate::GameState;
 use crate::core::{Window, Events, Camera};
 use crate::constant::{KEY_A, KEY_D, KEY_ESC, KEY_LEFT_SHIFT, KEY_S, KEY_SPACE, KEY_TAB, KEY_W, LCM, PCM, KEY_F1};
+use crate::mods::BlocksManager;
 use crate::player::Player;
 use crate::settings::{BLOCK_TYPES_NUMBER, CREATIVE_VERTICAL_MOVE, JUMP_FORCE, MOUSE_SENSITIVITY, MOVE_SPEED};
 use glam::{Vec3, Quat};
@@ -10,19 +11,20 @@ use crate::voxels::BlockType;
 use crate::graphics::{VoxelRenderer};
 
 
-pub fn update_moving(events: &mut Events, camera: &mut Camera, world: &mut World, delta_time: f32, renderer: &mut VoxelRenderer, hit: &Option<RayHit>, player: &mut Player) {
+
+pub fn update_moving(events: &mut Events, camera: &mut Camera, world: &mut World, delta_time: f32, renderer: &mut VoxelRenderer, hit: &Option<RayHit>, player: &mut Player, blocks_manager: &BlocksManager) {
     let mut direction = Vec3::ZERO;
     //camera.rotation = Quat::IDENTITY;
 
 
 
     // СЛУЖЕБНЫЕ СИСТЕМЫ (ИНВЕНТАРЬ)
-    if events.j_pressed(Key::F1 as i32) { player.selected_block = BlockType::Dirt; }
-    if events.j_pressed(Key::F2 as i32) { player.selected_block = BlockType::Planks; }
-    if events.j_pressed(Key::F3 as i32) { player.selected_block = BlockType::Grass; }
-    if events.j_pressed(Key::F4 as i32) { player.selected_block = BlockType::Stone; }
-    if events.j_pressed(Key::F5 as i32) { player.selected_block = BlockType::Sand; }
-    if events.j_pressed(Key::F6 as i32) { player.selected_block = BlockType::Wood; }
+    if events.j_pressed(Key::F1 as i32) { player.selected_block = "grass".to_string(); }
+    if events.j_pressed(Key::F2 as i32) { player.selected_block = "dirt".to_string(); }
+    if events.j_pressed(Key::F3 as i32) { player.selected_block = "planks".to_string(); }
+    // if events.j_pressed(Key::F4 as i32) { player.selected_block_id = 4; }
+    // if events.j_pressed(Key::F5 as i32) { player.selected_block_id = 5; }
+    // if events.j_pressed(Key::F6 as i32) { player.selected_block_id = 6; }
 
 
     // МЫШКА
@@ -46,12 +48,7 @@ pub fn update_moving(events: &mut Events, camera: &mut Camera, world: &mut World
 
 
     // ДВИЖЕНИЕ
-    if events.pressed(KEY_W) { 
-        direction += camera.front;
-    }
-
-
-    
+    if events.pressed(KEY_W) { direction += camera.front; }
     if events.pressed(KEY_S) { direction -= camera.front; }
     if events.pressed(KEY_A) { direction -= camera.right; }
     if events.pressed(KEY_D) { direction += camera.right; }
@@ -84,7 +81,7 @@ pub fn update_moving(events: &mut Events, camera: &mut Camera, world: &mut World
 
 
     let jump = events.j_pressed(KEY_SPACE);
-    println!("{}", player.on_ground);
+    //println!("{}", player.on_ground);
     let cam_pos = player.update_moving(world, direction, jump, delta_time);
     camera.position = cam_pos;
 
@@ -93,7 +90,7 @@ pub fn update_moving(events: &mut Events, camera: &mut Camera, world: &mut World
         if events.j_clicked(LCM) {
             println!("Нажата ЛКМ");
             world.set_block(hit.block_pos.0 as i32, hit.block_pos.1 as i32, hit.block_pos.2 as i32, BlockType::Air);
-            world.update(hit.block_pos, renderer);
+            world.update(hit.block_pos, renderer, blocks_manager);
             //println!("обноваление мира");
         } else if events.j_clicked(PCM) {
             println!("ПКМ");
@@ -101,8 +98,8 @@ pub fn update_moving(events: &mut Events, camera: &mut Camera, world: &mut World
             let ny = hit.block_pos.1 + hit.normal.1;
             let nz = hit.block_pos.2 + hit.normal.2;
             //println!("Sum: {} + {} = {}", hit.block_pos.2, hit.normal.2, nz);
-            world.set_block(nx, ny, nz, player.selected_block);
-            world.update(hit.block_pos, renderer);
+            world.set_block_by_name(nx, ny, nz, &player.selected_block, blocks_manager);
+            world.update(hit.block_pos, renderer, blocks_manager);
         }
     }
 
