@@ -9,10 +9,17 @@ use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 use super::chunk_loader_thread;
+use std::path::Path;
+use super::world_files::{WorldInfo, save_world_info};
+use super::chunks_loader::SaveRequest;
+use super::chunks_loader::chunk_saver_thread;
+
+
 
 pub struct WorldController {
     request_tx: Sender<ChunkRequest>,
     result_rx: Receiver<ChunkResult>,
+    save_tx: Sender<SaveRequest>,
     last_player_chunk: (i32, i32)
 }
 
@@ -26,9 +33,16 @@ impl WorldController {
             chunk_loader_thread(request_rx, result_tx);
         });
 
+        let (save_tx, save_rx) = mpsc::channel();
+
+        thread::spawn(move || {
+            chunk_saver_thread(save_rx);
+        });
+
         Self {
             request_tx,
-            result_rx, 
+            result_rx,
+            save_tx,
             last_player_chunk: (0, 0) 
         }
     }
@@ -50,17 +64,17 @@ impl WorldController {
             });
         }
 
-        World { chunks: world.chunks, chunks_meshes: world.chunks_meshes, min_cx: 0, max_cx: 0, min_cz: 0, max_cz: 0 }
+        World { chunks: world.chunks, chunks_meshes: world.chunks_meshes, min_cx: 0, max_cx: 0, min_cz: 0, max_cz: 0, }
     }
 
 
-    pub fn generate_world(&mut self, camera: &Camera, world: &mut World, blocks_manager: &BlocksManager, arc_blocks_manager: &Arc<BlocksManager>) {
+    pub fn generate_world(&mut self, camera: &Camera, world: &mut World, arc_blocks_manager: &Arc<BlocksManager>, world_path: &Path) {
         let player_cx = (camera.position.x / CHUNK_W as f32).floor() as i32;
         let player_cz = (camera.position.z / CHUNK_D as f32).floor() as i32;
 
         if player_cx != self.last_player_chunk.0 || player_cz != self.last_player_chunk.1 {
             self.last_player_chunk = (player_cx, player_cz);
-            world.update_world(player_cx, player_cz, &self.request_tx, arc_blocks_manager);
+            world.update_world(player_cx, player_cz, &self.request_tx, &self.save_tx, arc_blocks_manager, world_path);
         }
 
         while let Ok(result) = self.result_rx.try_recv() {
@@ -90,5 +104,15 @@ impl WorldController {
                 }
             }
         }
+    }
+
+
+    pub fn save_world(&self, world_info: &mut WorldInfo, world: &World, world_path: &Path, camera: &Camera) {
+        // Сохраняем позицию игрока
+        world_info.player_position = [camera.position.x, camera.position.y, camera.position.z];
+        save_world_info(world_path, world_info).expect("НЕВОЗМОЖНО СОХРАНИТЬСЯ!!!");
+
+        // Сохраняем все чанки
+        world.save_all_chunks(world_path);
     }
 }

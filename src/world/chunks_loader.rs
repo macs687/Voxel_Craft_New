@@ -1,17 +1,22 @@
-use std::sync::{Arc, mpsc};
+use std::path::PathBuf;
+use std::sync::{Arc, mpsc::Sender, mpsc::Receiver};
 use crate::graphics::VoxelRenderer;
 use crate::mods::BlocksManager;
 use crate::world::ChunkCoord;
 use std::collections::HashMap;
 use crate::voxels::{BlockType, Chunk};
 use crate::settings::{CHUNK_D, CHUNK_H, CHUNK_W};
+use crate::world::world_files;
+use crate::world::region::REGION_SIZE;
+use crate::world::world_files::save_chunk;
 
 
 pub struct ChunkRequest {
     pub coord: ChunkCoord,
     pub neighbors: HashMap<ChunkCoord, Box<[[[BlockType; CHUNK_W]; CHUNK_D]; CHUNK_H]>>,
     pub seed: u32,
-    pub blocks_manager: Arc<BlocksManager>
+    pub blocks_manager: Arc<BlocksManager>,
+    pub world_path: Option<PathBuf>
 }
 
 
@@ -22,15 +27,32 @@ pub struct ChunkResult {
 }
 
 
-pub fn chunk_loader_thread(request_rx: mpsc::Receiver<ChunkRequest>, result_tx: mpsc::Sender<ChunkResult>) {
+pub struct SaveRequest {
+    pub world_path: PathBuf,
+    pub coord: ChunkCoord,
+    pub chunk: Chunk,   // владеющий чанк
+}
+
+
+pub fn chunk_loader_thread(request_rx: Receiver<ChunkRequest>, result_tx: Sender<ChunkResult>) {
     let mut renderer = VoxelRenderer::init();
 
     
     loop {
         match request_rx.recv() {
             Ok(req) => {
-                let mut chunk = Chunk::new();
-                chunk.generate_terrain(req.coord.0, req.coord.1, req.coord.2, req.seed, &req.blocks_manager);
+                let chunk = if let Some(ref path) = req.world_path {
+                    world_files::load_chunk(path, req.coord.0, req.coord.1, req.coord.2)
+                        .unwrap_or_else(|| {
+                            let mut chunk_new = Chunk::new();
+                            chunk_new.generate_terrain(req.coord.0, req.coord.1, req.coord.2, req.seed, &req.blocks_manager);
+                            chunk_new
+                        })
+                } else {
+                    let mut chunk_new = Chunk::new();
+                    chunk_new.generate_terrain(req.coord.0, req.coord.1, req.coord.2, req.seed, &req.blocks_manager);
+                    chunk_new
+                };
 
                 renderer.buffer.clear();
 
@@ -70,6 +92,21 @@ pub fn chunk_loader_thread(request_rx: mpsc::Receiver<ChunkRequest>, result_tx: 
                 if result_tx.send(result).is_err() {
                     break;
                 };
+            },
+            Err(_) => break,
+        }
+    }
+}
+
+
+/// поток для сохранения чанков, который слушает канал `save_rx` и сохраняет чанки в файлы при получении запросов
+pub fn chunk_saver_thread(request_rx: Receiver<SaveRequest>) {
+    loop {
+        match request_rx.recv() {
+            Ok(req) => {
+                if let Err(e) = save_chunk(&req.world_path, req.coord.0, req.coord.1, req.coord.2, &req.chunk) {
+                    eprintln!("Failed to save chunk {:?}: {}", req.coord, e);
+                }
             },
             Err(_) => break,
         }

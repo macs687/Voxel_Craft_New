@@ -12,7 +12,7 @@ use crate::graphics::{VoxelRenderer};
 
 
 
-pub fn update_moving(events: &mut Events, camera: &mut Camera, world: &mut World, delta_time: f32, renderer: &mut VoxelRenderer, hit: &Option<RayHit>, player: &mut Player, blocks_manager: &BlocksManager) {
+pub fn update_actions(events: &mut Events, camera: &mut Camera, world: &mut World, delta_time: f32, renderer: &mut VoxelRenderer, hit: &Option<RayHit>, player: &mut Player, blocks_manager: &BlocksManager) {
     let mut direction = Vec3::ZERO;
     //camera.rotation = Quat::IDENTITY;
 
@@ -88,12 +88,12 @@ pub fn update_moving(events: &mut Events, camera: &mut Camera, world: &mut World
 
     if let Some(hit ) = hit {
         if events.j_clicked(LCM) {
-            println!("Нажата ЛКМ");
+            //println!("Нажата ЛКМ");
             world.set_block(hit.block_pos.0 as i32, hit.block_pos.1 as i32, hit.block_pos.2 as i32, BlockType::Air);
             world.update(hit.block_pos, renderer, blocks_manager);
             //println!("обноваление мира");
         } else if events.j_clicked(PCM) {
-            println!("ПКМ");
+            //println!("ПКМ");
             let nx = hit.block_pos.0 + hit.normal.0;
             let ny = hit.block_pos.1 + hit.normal.1;
             let nz = hit.block_pos.2 + hit.normal.2;

@@ -1,12 +1,12 @@
 use std::{collections::{HashMap, HashSet}, sync::Arc};
 use glam::{I16Vec3, Vec3, IVec3};
-use crate::{graphics::VoxelRenderer, mods::BlocksManager, settings::{CHUNK_D, CHUNK_H, CHUNK_W, MAX_STEPS, RENDER_DIST, SEED}, voxels::{BlockType, Chunk}, world::chunks_loader::ChunkRequest};
+use crate::{graphics::VoxelRenderer, mods::BlocksManager, settings::{CHUNK_D, CHUNK_H, CHUNK_W, MAX_STEPS, RENDER_DIST, SEED}, voxels::{BlockType, Chunk}, world::{chunks_loader::ChunkRequest, world_files}};
 use std::sync::mpsc::Sender;
-
+use std::path::PathBuf;
 use crate::graphics::Mesh;
-
+use std::path::Path;
 pub type ChunkCoord = (i32, i32, i32);
-
+use crate::world::chunks_loader::SaveRequest;
 
 pub struct World {
     pub chunks: HashMap<ChunkCoord, Chunk>,
@@ -15,6 +15,7 @@ pub struct World {
     pub max_cx: i32,
     pub min_cz: i32,
     pub max_cz: i32,
+    //pub world_path: Option<PathBuf>,
 }
 
 
@@ -35,7 +36,7 @@ impl World {
             min_cx: 0,
             max_cx: 0,
             min_cz: 0,
-            max_cz: 0 
+            max_cz: 0,
         }
     }
 
@@ -103,29 +104,55 @@ impl World {
     }
 
 
+    /// возвращает имя блока
+    pub fn get_block_name<'a>(& 'a self, x: i32, y: i32, z: i32, blocks_manager: & 'a BlocksManager) -> Option<& 'a str> {
+        if let Some(block) = self.get_block(x, y, z) {
+            let block_name = block.name(blocks_manager);
+            Some(block_name)
+        } else {
+            None
+        }
+    }
+
+
     fn calculete_meshes(&self, block_pos: (i32, i32, i32)) -> Vec<(i32, i32, i32)> {
         let cx = block_pos.0.div_euclid(CHUNK_W as i32);
         let cy = block_pos.1.div_euclid(CHUNK_H as i32);
         let cz = block_pos.2.div_euclid(CHUNK_D as i32);
 
+        let lx = block_pos.0.rem_euclid(CHUNK_W as i32) as usize;
+        let ly = block_pos.1.rem_euclid(CHUNK_H as i32) as usize;
+        let lz = block_pos.2.rem_euclid(CHUNK_D as i32) as usize;
+
         let mut to_rebuild = vec![(cx, cy, cz)];
-        for (dx, dy, dz) in [
-            (1, 0, 0), (-1, 0, 0),
-            (0, 1, 0), (0, -1, 0),
-            (0, 0, 1), (0, 0, -1),
-        ] {
-            let nc = (cx + dx, cy + dy, cz + dz);
-            if self.chunks.contains_key(&nc) {
-                to_rebuild.push(nc);
-            }
+
+        // Добавляем соседа только если блок на границе с ним
+        if lx == 0 {
+            to_rebuild.push((cx - 1, cy, cz));
+        } else if lx == CHUNK_W - 1 {
+            to_rebuild.push((cx + 1, cy, cz));
         }
 
+        if ly == 0 {
+            to_rebuild.push((cx, cy - 1, cz));
+        } else if ly == CHUNK_H - 1 {
+            to_rebuild.push((cx, cy + 1, cz));
+        }
+
+        if lz == 0 {
+            to_rebuild.push((cx, cy, cz - 1));
+        } else if lz == CHUNK_D - 1 {
+            to_rebuild.push((cx, cy, cz + 1));
+        }
+
+        to_rebuild.retain(|coord| self.chunks.contains_key(coord));
         to_rebuild
-    }  
+    }
 
 
     pub fn update(&mut self, block_pos: (i32, i32, i32), renderer: &mut VoxelRenderer, blocks_manager: &BlocksManager) {
         let to_rebuild = self.calculete_meshes(block_pos);
+
         for coord in to_rebuild {
             if let Some(chunk) = self.chunks.get(&coord) {
                 let new_mesh = renderer.render(chunk, coord.0, coord.1, coord.2, &self, blocks_manager);
@@ -137,10 +164,6 @@ impl World {
                 };
 
                 if let Some(old) = self.chunks_meshes.insert(coord, new_chunk_mesh) {
-                    //println!("Chunk {:?} new vertex count: {}", coord, new_mesh.vertex_count);
-                    // Явно удаляем старые буферы (или полагаемся на Drop)
-                    //drop(old); // Drop освободит VAO и VBO
-
                     unsafe {
                         gl::DeleteVertexArrays(1, &old.vao);
                         gl::DeleteBuffers(1, &old.vbo);
@@ -153,12 +176,11 @@ impl World {
         self.max_cx = self.chunks.keys().map(|&(cx, _, _)| cx).max().unwrap_or(0);
         self.min_cz = self.chunks.keys().map(|&(_, _, cz)| cz).min().unwrap_or(0);
         self.max_cz = self.chunks.keys().map(|&(_, _, cz)| cz).max().unwrap_or(0);
-
-        println!("update_chunks: границы X=[{}..{}], Z=[{}..{}]", self.min_cx, self.max_cx, self.min_cz, self.max_cz);
     }
 
 
-    pub fn update_world(&mut self, player_cx: i32, player_cz: i32, request_tx: &Sender<ChunkRequest>, blocks_manager: &Arc<BlocksManager>,) {
+    /// Загружает чанк из данных, полученных из файла (временная функция, позже будет использоваться только для генерации чанков)
+    pub fn update_world(&mut self, player_cx: i32, player_cz: i32, request_tx: &Sender<ChunkRequest>, save_tx: &Sender<SaveRequest>, blocks_manager: &Arc<BlocksManager>, world_path: &Path) {
         let mut required = HashSet::new();
 
         for dx in -RENDER_DIST..RENDER_DIST {
@@ -167,7 +189,25 @@ impl World {
             }
         }
 
-        self.chunks.retain(|&(cx, cy, cz), _| required.contains(&(cx, cy, cz)));
+        // Перед удалением старых чанков сохраняем их на диск
+        let to_remove: Vec<ChunkCoord> = self.chunks.keys()
+            .filter(|k| !required.contains(k))
+            .copied()
+            .collect();
+
+        for coord in &to_remove {
+            if let Some(chunk) = self.chunks.remove(coord) {   // забираем чанк из HashMap
+                if chunk.modified {
+                    let request = SaveRequest {
+                        world_path: world_path.to_path_buf(),
+                        coord: *coord,
+                        chunk,   // передаём владение
+                    };
+                    save_tx.send(request).ok(); // асинхронно, без ожидания
+                }
+            }
+        }
+
 
         for coord in &required {
             if !self.chunks.contains_key(coord) {
@@ -182,11 +222,13 @@ impl World {
                     }
                 }
 
+            
                 let request = ChunkRequest {
                     coord: *coord,
                     neighbors,
                     seed: SEED,
-                    blocks_manager: blocks_manager.clone()
+                    blocks_manager: blocks_manager.clone(),
+                    world_path: Some(world_path.to_path_buf())
                 };
 
                 request_tx.send(request).expect("Failed to send chunk");
@@ -202,6 +244,22 @@ impl World {
             self.min_cz = self.chunks.keys().map(|&(_, _, cz)| cz).min().unwrap();
             self.max_cz = self.chunks.keys().map(|&(_, _, cz)| cz).max().unwrap();
         }
+    }
+
+
+    /// Сохраняет все текущие чанки на диск (при выходе из игры)
+    pub fn save_all_chunks(&self, world_path: &Path) {
+        for (&(cx, cy, cz), chunk) in &self.chunks {
+            if let Err(e) = world_files::save_chunk(world_path, cx, cy, cz, chunk) {
+                eprintln!("Failed to save chunk ({},{},{}): {}", cx, cy, cz, e);
+            }
+        }
+    }
+
+
+    /// Сохраняет один чанк (при выгрузке)
+    pub fn save_chunk_if_needed(&self, cx: i32, cy: i32, cz: i32, chunk: &Chunk, world_path: &Path) {
+        let _ = world_files::save_chunk(world_path, cx, cy, cz, chunk);
     }
 }
 

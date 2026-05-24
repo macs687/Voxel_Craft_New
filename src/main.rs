@@ -1,4 +1,5 @@
 use std::time::Instant;
+use glam::Vec3;
 use glfw::ffi::GLFW_KEY_ESCAPE;
 use settings::{HEIGHT, TITLE, WIDTH, SPAWNPOINT, FOV};
 use loger::ProjectErrors;
@@ -7,7 +8,7 @@ use graphics::{load_shader, load_texture_from_png};
 use graphics::VoxelRenderer;
 use graphics::{create_crosshair_mesh, create_wireframe_mesh};
 use physics::update_time;
-use controls::update_moving;
+use controls::update_actions;
 use world::raycast;
 use world::draw_world;
 use world::WorldController;
@@ -22,6 +23,12 @@ use std::sync::{Arc, mpsc};
 use world::{ChunkRequest, ChunkResult};
 use world::chunk_loader_thread;
 use crate::settings::Settings;
+use std::path::Path;
+use world::save_world_info;
+use world::WorldInfo;
+use world::load_world_info;
+use rand;
+use std::fs;
 
 
 mod mods;
@@ -213,9 +220,27 @@ fn main() -> Result<(), ProjectErrors> {
             println!("инициализация рендер движка: ок");
 
             println!("Создание мира");
+            let world_name = "World_1".to_string();
+            let worlds_dir = Path::new("res/worlds");
+            let world_path = worlds_dir.join(&world_name);
             let mut world_controller = WorldController::init();
-            let mut world = world_controller.create_world(&mut renderer, &blocks_manager);
-            println!("Создание мира: ок");
+            let mut world;
+            let mut world_info;
+
+            if world_path.exists() {
+                world_info = load_world_info(&world_path).expect("Failed to load world info");
+                world = world_controller.create_world(&mut renderer, &blocks_manager);
+
+                println!("Loaded world '{}' with seed {}", world_name, world_info.seed);
+            } else {
+                let seed = rand::random::<u32>();
+                world_info = WorldInfo { name: world_name.clone(), seed, player_position: SPAWNPOINT.into() };
+
+                fs::create_dir_all(&world_path).expect("Failed to create world directory");
+                save_world_info(&world_path, &world_info).expect("Failed to save world info");
+
+                world = world_controller.create_world(&mut renderer, &blocks_manager);
+            }
 
             let crosshair_mesh = create_crosshair_mesh();
             let cube_mesh = create_wireframe_mesh();
@@ -225,17 +250,20 @@ fn main() -> Result<(), ProjectErrors> {
             let mut last_frame = Instant::now();
 
             println!("инициализация камеры");
-            let mut camera = Camera::init(SPAWNPOINT, FOV);
+            let spawnpoint = Vec3::new(world_info.player_position[0], world_info.player_position[1], world_info.player_position[2]);
+            let mut camera = Camera::init(spawnpoint, FOV);
             println!("инициализация камеры: ок");
 
             let mut player = Player::init(SPAWNPOINT);
 
             println!("Start main loop");
 
+            println!("Позиция игрока при загрузке: x{} y{} z{}", world_info.player_position[0], world_info.player_position[1], world_info.player_position[2]);
             while game_state == GameState::Playing {
                 events.pull_events(&mut window);
 
                 if events.j_pressed(KEY_ESC) {
+                    world_controller.save_world(&mut world_info, &world, &world_path, &camera);
                     game_state = GameState::Menu;
                     break;
                 } else if events.j_pressed(KEY_TAB) {
@@ -246,9 +274,9 @@ fn main() -> Result<(), ProjectErrors> {
                 last_frame = now;
 
                 let hit = raycast(&world, camera.position, camera.front, RANGE as f32);
-                update_moving(&mut events, &mut camera, &mut world, delta_time, &mut renderer, &hit, &mut player, &blocks_manager);
+                update_actions(&mut events, &mut camera, &mut world, delta_time, &mut renderer, &hit, &mut player, &blocks_manager);
 
-                world_controller.generate_world(&camera, &mut world, &blocks_manager, &blocks_manager);
+                world_controller.generate_world(&camera, &mut world, &blocks_manager, &world_path);
 
                 draw_world(&mut window, &shader, &camera, &texture, &world.chunks_meshes, &crosshair_shader, &crosshair_mesh, &line_shader, &cube_mesh, &hit);
             }

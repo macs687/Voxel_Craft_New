@@ -42,7 +42,7 @@ pub const JUMP_FORCE: f32 = 8.0;
 
 pub const CREATIVE_VERTICAL_MOVE: f32 = 0.1;
 pub const CREATIVE_HORIZONTAL_SPEED: f32 = 70.0;
-pub const PERMISION_TEXTURE: u32 = 16;
+pub const PERMISION_TEXTURE: u32 = 32;
 
 
 use std::fs;

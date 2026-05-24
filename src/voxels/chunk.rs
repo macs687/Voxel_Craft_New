@@ -6,6 +6,7 @@ use noise::{NoiseFn, Perlin};
 
 pub struct Chunk {
     pub blocks: Box<[[[BlockType; CHUNK_W]; CHUNK_D]; CHUNK_H]>,
+    pub modified: bool, // флаг, указывающий, был ли изменён чанк после загрузки
 }
 
 
@@ -19,7 +20,7 @@ impl Chunk {
 
         //println!("Chunk dimensions: W={}, H={}, D={}", CHUNK_W, CHUNK_H, CHUNK_D);
 
-        Chunk { blocks: boxed }
+        Chunk { blocks: boxed, modified: false }
     }
 
 
@@ -35,6 +36,7 @@ impl Chunk {
     pub fn set_block(&mut self, x: usize, y: usize, z: usize, block: BlockType) {
         if x < CHUNK_W && y < CHUNK_H && z < CHUNK_D {
             self.blocks[y][z][x] = block;
+            self.modified = true;
         }
     }
 
