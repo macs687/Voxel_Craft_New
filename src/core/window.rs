@@ -19,7 +19,7 @@ impl Window {
     pub fn init(title: &str, width: u32, height: u32) -> Result<Self, ProjectErrors> {
         // инициализация glfw
         let mut glfw = glfw::init(glfw::fail_on_errors!()).map_err(|e| ProjectErrors::GlfwInitError(format!("{e}")))?;
-        
+
         // ??
         glfw.window_hint(glfw::WindowHint::ContextVersionMajor(3));
         glfw.window_hint(glfw::WindowHint::ContextVersionMinor(3));
@@ -45,14 +45,14 @@ impl Window {
         }
 
         Ok(Self {
-        glfw,
-        window,
-        receiver: events,
-        width,
-        height
+            glfw,
+            window,
+            receiver: events,
+            width,
+            height
         })
     }
-    
+
 
     /// проверка открыто ли окно сейчас
     pub fn is_open(&self) -> bool {

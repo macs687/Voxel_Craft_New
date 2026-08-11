@@ -73,6 +73,15 @@ impl Shader {
             }
         }
     }
+
+
+    pub fn uniform_float(&self, name: &str, value: f32) {
+        unsafe {
+            let c_name = CString::new(name).unwrap();
+            let loc = gl::GetUniformLocation(self.id, c_name.as_ptr());
+            if loc != -1 { gl::Uniform1f(loc, value); }
+        }
+    }
 }
 
 

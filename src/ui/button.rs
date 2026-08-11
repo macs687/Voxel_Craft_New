@@ -3,9 +3,7 @@ use crate::assets::fonts;
 use crate::graphics::load_texture_from_image_data;
 use crate::loger::ProjectErrors;
 use gl::types::GLuint;
-use glam::{Mat4, Vec3};
 use image::imageops;
-
 
 
 pub struct Button {

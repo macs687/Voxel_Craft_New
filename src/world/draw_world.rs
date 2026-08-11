@@ -35,12 +35,6 @@ pub fn draw_world(window: &mut Window, shader: &Shader, camera: &Camera, texture
         }
     }
 
-
-
-    //println!("cam pos: {:?}, front: {:?}", camera.position, camera.front);
-
-    //println!("ray cast normal");
-    //Рисуем wireframe куб вокруг блока
     if let Some(hit) = hit {
          let model = Mat4::from_translation(Vec3::new(
              hit.block_pos.0 as f32,
@@ -62,7 +56,6 @@ pub fn draw_world(window: &mut Window, shader: &Shader, camera: &Camera, texture
         }
     }
     
-
     crosshair_shader.use_shader();
     crosshair_shader.uniform_color("uColor", 1.0, 1.0, 1.0, 0.8);
 
@@ -71,7 +64,6 @@ pub fn draw_world(window: &mut Window, shader: &Shader, camera: &Camera, texture
         gl::Enable(gl::BLEND);
         gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
     }
-    // рисуем прицел
     
     unsafe {
         gl::BindVertexArray(crosshair_mesh.vao);

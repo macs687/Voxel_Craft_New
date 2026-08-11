@@ -10,9 +10,9 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 use super::chunk_loader_thread;
 use std::path::Path;
-use super::world_files::{WorldInfo, save_world_info};
+// use super::world_files::{WorldInfo, save_world_info};
 use super::chunks_loader::SaveRequest;
-use super::chunks_loader::chunk_saver_thread;
+// use super::chunks_loader::chunk_saver_thread;
 
 
 
@@ -35,9 +35,9 @@ impl WorldController {
 
         let (save_tx, save_rx) = mpsc::channel();
 
-        thread::spawn(move || {
-            chunk_saver_thread(save_rx);
-        });
+        // thread::spawn(move || {
+        //     chunk_saver_thread(save_rx);
+        // });
 
         Self {
             request_tx,
@@ -107,12 +107,12 @@ impl WorldController {
     }
 
 
-    pub fn save_world(&self, world_info: &mut WorldInfo, world: &World, world_path: &Path, camera: &Camera) {
-        // Сохраняем позицию игрока
-        world_info.player_position = [camera.position.x, camera.position.y, camera.position.z];
-        save_world_info(world_path, world_info).expect("НЕВОЗМОЖНО СОХРАНИТЬСЯ!!!");
+    // pub fn save_world(&self, world_info: &mut WorldInfo, world: &World, world_path: &Path, camera: &Camera) {
+    //     // Сохраняем позицию игрока
+    //     world_info.player_position = [camera.position.x, camera.position.y, camera.position.z];
+    //     save_world_info(world_path, world_info).expect("НЕВОЗМОЖНО СОХРАНИТЬСЯ!!!");
 
-        // Сохраняем все чанки
-        world.save_all_chunks(world_path);
-    }
+    //     // Сохраняем все чанки
+    //     world.save_all_chunks(world_path);
+    // }
 }

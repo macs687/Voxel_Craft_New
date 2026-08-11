@@ -120,9 +120,9 @@ impl Events {
         for (_, event) in glfw::flush_messages(&window.receiver) {
             match event {
                 glfw::WindowEvent::Size(w, h) => {
-                    unsafe {
-                        gl::Viewport(0, 0, w, h);
-                    }
+                    window.width = w as u32;
+                    window.height = h as u32;
+                    unsafe { gl::Viewport(0, 0, w, h); }
                 },
 
                 glfw::WindowEvent::CursorPos(xpos, ypos) => {

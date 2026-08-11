@@ -1,6 +1,7 @@
 use std::time::Instant;
-use glam::Vec3;
-use glfw::ffi::GLFW_KEY_ESCAPE;
+// use glam::Vec3;
+use glfw::Key;
+// use glfw::ffi::GLFW_KEY_ESCAPE;
 use settings::{HEIGHT, TITLE, WIDTH, SPAWNPOINT, FOV};
 use loger::ProjectErrors;
 use core::{Window, Events, Camera};
@@ -19,18 +20,22 @@ use crate::voxels::BlockType;
 use player::Player;
 use ui::Button;
 use graphics::create_ui_quad;
-use std::sync::{Arc, mpsc};
-use world::{ChunkRequest, ChunkResult};
-use world::chunk_loader_thread;
+use std::sync::{Arc};
+// use world::{ChunkRequest, ChunkResult};
+// use world::chunk_loader_thread;
 use crate::settings::Settings;
 use std::path::Path;
-use world::save_world_info;
-use world::WorldInfo;
-use world::load_world_info;
+// use world::save_world_info;
+// use world::WorldInfo;
+// use world::load_world_info;
 use rand;
 use std::fs;
+use std::io;
+use ui::draw_background;
+use mods::MenuConfig;
 
 
+mod files;
 mod mods;
 mod assets;
 mod constant;
@@ -49,8 +54,33 @@ mod ui;
 #[derive(PartialEq)]
 enum GameState {
     Menu,
+    WorldSelect,
     Settings,
     Playing,
+}
+
+
+fn list_worlds() -> Vec<String> {
+    let worlds_dir = Path::new("res/worlds");
+    if !worlds_dir.exists() {
+        return Vec::new();
+    }
+    let mut worlds = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(worlds_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                // Проверяем, что внутри есть world.toml
+                if path.join("world.toml").exists() {
+                    if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                        worlds.push(name.to_string());
+                    }
+                }
+            }
+        }
+    }
+    worlds.sort(); // для стабильного порядка
+    worlds
 }
 
 
@@ -86,10 +116,16 @@ fn main() -> Result<(), ProjectErrors> {
     println!("загрузка меню");
     let mut game_state = GameState::Menu;
     let ui_quad_vao = create_ui_quad();
+    
 
-    let button_play = Button::new("Play", 0.0, 0.4, 0.3, 0.1)?;
+    let button_worlds = Button::new("Worlds", 0.0, 0.4, 0.3, 0.1)?;
     let button_settings = Button::new("Settings", 0.0, 0.0, 0.3, 0.1)?;
     let button_exit = Button::new("Exit", 0.0, -0.4, 0.3, 0.1)?;
+
+    //let texture = load_texture_from_png("res/textures/planks.png")?;
+    //println!("Texture ID: {}", texture.id);
+    let background_shader = load_shader("res/shaders/background_vertex.glsl", "res/shaders/background_fragment.glsl")?;
+    let fullscreen_quad_vao = create_ui_quad();
 
     // Кнопки меню настроек
     let button_back = Button::new("Back", 0.0, -0.4, 0.3, 0.1)?;
@@ -98,14 +134,17 @@ fn main() -> Result<(), ProjectErrors> {
     // let button_vol_up = Button::new("Vol+", -0.2, -0.1, 0.2, 0.1)?;
     // let button_vol_down = Button::new("Vol-", 0.2, -0.1, 0.2, 0.1)?;
 
+    let mut active_world= String::new();
+
+
+    let start_time = std::time::Instant::now();
+
+    let menu_config = MenuConfig::load("res/menu_config.toml");
+    let menu_background_texture = load_texture_from_png(&menu_config.background_texture)?;
 
     println!("Вход в меню");
     while window.is_open() {
-
-        unsafe {
-            gl::Disable(gl::DEPTH_TEST);
-            //gl::Disable(gl::CULL_FACE);
-        }
+        let elapsed = start_time.elapsed().as_secs_f32();
 
         // ЦИКЛ МЕНЮ
         while game_state == GameState::Menu {
@@ -118,37 +157,38 @@ fn main() -> Result<(), ProjectErrors> {
             if events.j_pressed(KEY_ESC) {
                 window.close();
                 break;
+            } else if events.j_pressed(Key::F11 as i32) {
+                //window.switch_window_mode();
             }
 
-            unsafe {
-                gl::ClearColor(0.1, 0.1, 0.1, 1.0);
-                gl::Clear(gl::COLOR_BUFFER_BIT);
-            }
+            draw_background(&background_shader, &menu_background_texture, ui_quad_vao, elapsed);
 
-            button_play.draw_button(&ui_shader, ui_quad_vao);
+            button_worlds.draw_button(&ui_shader, ui_quad_vao);
             button_settings.draw_button(&ui_shader, ui_quad_vao);
             button_exit.draw_button(&ui_shader, ui_quad_vao);
 
             if events.j_clicked(LCM) {
+                println!("лкм нажата");
                 let (mx, my) = (events.x as f32, events.y as f32);
                 let (ww, wh) = (window.width as f32, window.height as f32);
                 let ndc_x = 2.0 * mx / ww - 1.0;
                 let ndc_y = 1.0 - 2.0 * my / wh;
 
-                if button_play.contains(ndc_x, ndc_y) {
-                    game_state = GameState::Playing;
+                if button_worlds.contains(ndc_x, ndc_y) {
+                    game_state = GameState::WorldSelect;
                     break
                 } else if button_settings.contains(ndc_x, ndc_y) {
                     game_state = GameState::Settings;
                     break
                 } else if button_exit.contains(ndc_x, ndc_y) {
+                    println!("Выход из игры");
                     window.close();
                     break
                 }
             }
+
             window.swap_buffers();
         }
-
 
 
         // ЦИКЛ НАСТРОЕК
@@ -199,6 +239,106 @@ fn main() -> Result<(), ProjectErrors> {
         }
 
 
+        // Цикл выборки мира 
+        while game_state == GameState::WorldSelect {
+            //println!("Вход в меню выбора мира");
+            events.pull_events(&mut window);
+
+            if events.cursor_locked {
+                events.switch_cursor_mode(&mut window);
+            }
+
+            if events.j_pressed(KEY_ESC) {
+                game_state = GameState::Menu;
+                break;
+            }
+
+            unsafe {
+                gl::ClearColor(0.1, 0.1, 0.1, 1.0);
+                gl::Clear(gl::COLOR_BUFFER_BIT);
+            }
+
+            let new_world_button = Button::new("Create New World", 0.0, -0.7, 0.5, 0.1)?;
+            new_world_button.draw_button(&ui_shader, ui_quad_vao);
+
+            let mut worlds = list_worlds();
+            let mut world_buttons = Vec::new();
+
+            if !worlds.is_empty() {
+                for (i, world_name) in worlds.iter().enumerate() {
+                    let btn = Button::new(world_name, 0.0, 0.4 - i as f32 * 0.15, 0.5, 0.1)?;
+                    btn.draw_button(&ui_shader, ui_quad_vao);
+                    world_buttons.push(btn);
+                }
+
+                if events.j_clicked(LCM) {
+                    let (mx, my) = (events.x as f32, events.y as f32);
+                    let (ww, wh) = (window.width as f32, window.height as f32);
+                    let ndc_x = 2.0 * mx / ww - 1.0;
+                    let ndc_y = 1.0 - 2.0 * my / wh;
+
+                    if new_world_button.contains(ndc_x, ndc_y) {
+                        println!("Создание нового мира");
+                        
+                        let mut world_name = String::new();
+                        println!("Введите имя мира:");
+                        io::stdin().read_line(&mut world_name).expect("Failed to read line");
+                        let world_name = world_name.trim();
+                        if world_name.is_empty() {
+                            println!("Имя мира не может быть пустым");
+                        } else if world_buttons.iter().any(|b| b.text == world_name) {
+                            println!("Мир с таким именем уже существует");
+                        } else {
+                            active_world = world_name.to_string();
+                            println!("Выбран мир '{}'", &active_world.clone());
+                            game_state = GameState::Playing;
+                            break;
+                        }
+                    }
+
+                    for (i, btn) in world_buttons.iter().enumerate() {
+                        if btn.contains(ndc_x, ndc_y) {
+                            active_world = worlds[i].clone();
+                            println!("Выбран мир '{}'", &active_world.clone());
+                            game_state = GameState::Playing;
+                            break;
+                        }
+                    }        
+                }
+            } else {
+                println!("Нет миров для отображения");
+
+                if events.j_clicked(LCM) {
+                    let (mx, my) = (events.x as f32, events.y as f32);
+                    let (ww, wh) = (window.width as f32, window.height as f32);
+                    let ndc_x = 2.0 * mx / ww - 1.0;
+                    let ndc_y = 1.0 - 2.0 * my / wh;
+
+                    if new_world_button.contains(ndc_x, ndc_y) {
+                        println!("Создание нового мира");
+                        
+                        let mut world_name = String::new();
+                        println!("Введите имя мира:");
+                        io::stdin().read_line(&mut world_name).expect("Failed to read line");
+                        let world_name = world_name.trim();
+                        if world_name.is_empty() {
+                            println!("Имя мира не может быть пустым");
+                        } else if world_buttons.iter().any(|b| b.text == world_name) {
+                            println!("Мир с таким именем уже существует");
+                        } else {
+                            active_world = world_name.to_string();
+                            println!("Выбран мир '{}'", &active_world.clone());
+                            game_state = GameState::Playing;
+                            break;
+                        }
+                    }      
+                }
+            }
+
+            window.swap_buffers();
+        }
+
+
         if game_state == GameState::Playing {
             // ПРОМЕЖУТОЧНЫЙ ЭТАП (ЗАГРУЗКА МИРА)
             if !events.cursor_locked {
@@ -220,24 +360,24 @@ fn main() -> Result<(), ProjectErrors> {
             println!("инициализация рендер движка: ок");
 
             println!("Создание мира");
-            let world_name = "World_1".to_string();
+            let world_name = active_world.clone();
             let worlds_dir = Path::new("res/worlds");
             let world_path = worlds_dir.join(&world_name);
             let mut world_controller = WorldController::init();
             let mut world;
-            let mut world_info;
+            // let mut world_info;
 
             if world_path.exists() {
-                world_info = load_world_info(&world_path).expect("Failed to load world info");
+                //world_info = load_world_info(&world_path).expect("Failed to load world info");
                 world = world_controller.create_world(&mut renderer, &blocks_manager);
 
-                println!("Loaded world '{}' with seed {}", world_name, world_info.seed);
+                //println!("Loaded world '{}' with seed {}", world_name, world_info.seed);
             } else {
                 let seed = rand::random::<u32>();
-                world_info = WorldInfo { name: world_name.clone(), seed, player_position: SPAWNPOINT.into() };
+                //world_info = WorldInfo { name: world_name.clone(), seed, player_position: SPAWNPOINT.into() };
 
                 fs::create_dir_all(&world_path).expect("Failed to create world directory");
-                save_world_info(&world_path, &world_info).expect("Failed to save world info");
+                //save_world_info(&world_path, &world_info).expect("Failed to save world info");
 
                 world = world_controller.create_world(&mut renderer, &blocks_manager);
             }
@@ -250,21 +390,21 @@ fn main() -> Result<(), ProjectErrors> {
             let mut last_frame = Instant::now();
 
             println!("инициализация камеры");
-            let spawnpoint = Vec3::new(world_info.player_position[0], world_info.player_position[1], world_info.player_position[2]);
-            let mut camera = Camera::init(spawnpoint, FOV);
+            //let spawnpoint = Vec3::new(world_info.player_position[0], world_info.player_position[1], world_info.player_position[2]);
+            let mut camera = Camera::init(SPAWNPOINT, FOV);
             println!("инициализация камеры: ок");
 
             let mut player = Player::init(SPAWNPOINT);
 
             println!("Start main loop");
 
-            println!("Позиция игрока при загрузке: x{} y{} z{}", world_info.player_position[0], world_info.player_position[1], world_info.player_position[2]);
+            // println!("Позиция игрока при загрузке: x{} y{} z{}", world_info.player_position[0], world_info.player_position[1], world_info.player_position[2]);
             while game_state == GameState::Playing {
                 events.pull_events(&mut window);
 
                 if events.j_pressed(KEY_ESC) {
-                    world_controller.save_world(&mut world_info, &world, &world_path, &camera);
-                    game_state = GameState::Menu;
+                    //world_controller.save_world(&mut world_info, &world, &world_path, &camera);
+                    game_state = GameState::WorldSelect;
                     break;
                 } else if events.j_pressed(KEY_TAB) {
                     events.switch_cursor_mode(&mut window);

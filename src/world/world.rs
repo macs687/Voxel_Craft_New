@@ -247,20 +247,20 @@ impl World {
     }
 
 
-    /// Сохраняет все текущие чанки на диск (при выходе из игры)
-    pub fn save_all_chunks(&self, world_path: &Path) {
-        for (&(cx, cy, cz), chunk) in &self.chunks {
-            if let Err(e) = world_files::save_chunk(world_path, cx, cy, cz, chunk) {
-                eprintln!("Failed to save chunk ({},{},{}): {}", cx, cy, cz, e);
-            }
-        }
-    }
+    // /// Сохраняет все текущие чанки на диск (при выходе из игры)
+    // pub fn save_all_chunks(&self, world_path: &Path) {
+    //     for (&(cx, cy, cz), chunk) in &self.chunks {
+    //         if let Err(e) = world_files::save_chunk(world_path, cx, cy, cz, chunk) {
+    //             eprintln!("Failed to save chunk ({},{},{}): {}", cx, cy, cz, e);
+    //         }
+    //     }
+    // }
 
 
-    /// Сохраняет один чанк (при выгрузке)
-    pub fn save_chunk_if_needed(&self, cx: i32, cy: i32, cz: i32, chunk: &Chunk, world_path: &Path) {
-        let _ = world_files::save_chunk(world_path, cx, cy, cz, chunk);
-    }
+    // /// Сохраняет один чанк (при выгрузке)
+    // pub fn save_chunk_if_needed(&self, cx: i32, cy: i32, cz: i32, chunk: &Chunk, world_path: &Path) {
+    //     let _ = world_files::save_chunk(world_path, cx, cy, cz, chunk);
+    // }
 }
 
 
