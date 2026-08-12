@@ -1,6 +1,6 @@
 use crate::GameState;
 use crate::core::{Window, Events, Camera};
-use crate::constant::{KEY_A, KEY_D, KEY_ESC, KEY_LEFT_SHIFT, KEY_S, KEY_SPACE, KEY_TAB, KEY_W, LCM, PCM, KEY_F1};
+use crate::settings::{KEY_A, KEY_D, KEY_ESC, KEY_LEFT_SHIFT, KEY_S, KEY_SPACE, KEY_TAB, KEY_W, KEY_LCM, KEY_PCM, KEY_F1};
 use crate::mods::BlocksManager;
 use crate::player::Player;
 use crate::settings::{BLOCK_TYPES_NUMBER, CREATIVE_VERTICAL_MOVE, JUMP_FORCE, MOUSE_SENSITIVITY, MOVE_SPEED};
@@ -87,12 +87,12 @@ pub fn update_actions(events: &mut Events, camera: &mut Camera, world: &mut Worl
 
 
     if let Some(hit ) = hit {
-        if events.j_clicked(LCM) {
+        if events.j_clicked(KEY_LCM) {
             //println!("Нажата ЛКМ");
             world.set_block(hit.block_pos.0 as i32, hit.block_pos.1 as i32, hit.block_pos.2 as i32, BlockType::Air);
             world.update(hit.block_pos, renderer, blocks_manager);
             //println!("обноваление мира");
-        } else if events.j_clicked(PCM) {
+        } else if events.j_clicked(KEY_PCM) {
             //println!("ПКМ");
             let nx = hit.block_pos.0 + hit.normal.0;
             let ny = hit.block_pos.1 + hit.normal.1;

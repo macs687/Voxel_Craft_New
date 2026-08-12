@@ -1,4 +1,27 @@
+use glfw::Key;
+use glfw::{MouseButtonLeft, MouseButtonRight};
 use glam::Vec3;
+
+const PATH: &str = "res/settings.toml";   // <-- обновлённый путь
+
+
+
+
+/// Левая кнопка мыши
+pub const KEY_LCM: i32 = MouseButtonLeft as i32;
+/// правая кнопка мыши
+pub const KEY_PCM: i32 = MouseButtonRight as i32;
+pub const KEY_TAB: i32 = Key::Tab as i32;
+pub const KEY_W: i32 = Key::W as i32;
+pub const KEY_A: i32 = Key::A as i32;
+pub const KEY_S: i32 = Key::S as i32;
+pub const KEY_D: i32 = Key::D as i32;
+pub const KEY_SPACE: i32 = Key::Space as i32;
+pub const KEY_LEFT_SHIFT: i32 = Key::LeftShift as i32;
+pub const KEY_ESC: i32 = Key::Escape as i32;
+pub const KEY_F1: i32 = Key::F1 as i32;
+pub const KEY_F11: i32 = Key::F11 as i32;
+
 
 /// ширина чанка X
 pub const CHUNK_W: usize = 16;  // ширина по X
@@ -27,7 +50,7 @@ pub const BLOCK_TYPES_NUMBER: i32 = 6;
 
 /// НАСТРОЙКИ РЭЙКАСТА
 pub const MAX_STEPS: i32 = 30;
-pub const RANGE: i32 = 7;
+pub const RAYCAST_DIST: f32 = 7.0;
 
 /// дальность прорисовки
 pub const RENDER_DIST: i32 = 16;
@@ -43,6 +66,12 @@ pub const JUMP_FORCE: f32 = 8.0;
 pub const CREATIVE_VERTICAL_MOVE: f32 = 0.1;
 pub const CREATIVE_HORIZONTAL_SPEED: f32 = 70.0;
 pub const PERMISION_TEXTURE: u32 = 32;
+
+
+
+pub const PATH_SETTINGS: &str = "res/settings.toml";
+
+
 
 
 use std::fs;
@@ -67,19 +96,17 @@ impl Default for Settings {
 
 
 impl Settings {
-    const PATH: &str = "res/settings.toml";   // <-- обновлённый путь
-
-    pub fn load() -> Self {
-        if Path::new(Self::PATH).exists() {
-            let data = fs::read_to_string(Self::PATH).expect("Unable to read settings file");
+    pub fn load(path: &str) -> Self {
+        if Path::new(path).exists() {
+            let data = fs::read_to_string(path).expect("Unable to read settings file");
             toml::from_str(&data).unwrap_or_default()
         } else {
             Settings::default()
         }
     }
 
-    pub fn save(&self) {
+    pub fn save(&self, path: &str) {
         let data = toml::to_string_pretty(self).expect("Failed to serialize settings");
-        fs::write(Self::PATH, data).expect("Unable to write settings file");
+        fs::write(path, data).expect("Unable to write settings file");
     }
 }

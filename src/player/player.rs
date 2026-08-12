@@ -2,7 +2,7 @@ use glam::Vec3;
 use crate::settings::{BASE_PLAYER_EYE_HEIGHT, CREATIVE_HORIZONTAL_SPEED, GRAVITY, JUMP_FORCE, MOVE_SPEED, PLAYER_HEIGHT, PLAYER_WIDTH};
 use crate::world::World;
 use crate::physics::Hitbox;
-use crate::BlockType;
+use crate::voxels::BlockType;
 
 
 pub struct Player {

@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 use super::chunk_loader_thread;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 // use super::world_files::{WorldInfo, save_world_info};
 use super::chunks_loader::SaveRequest;
 // use super::chunks_loader::chunk_saver_thread;
@@ -68,7 +68,7 @@ impl WorldController {
     }
 
 
-    pub fn generate_world(&mut self, camera: &Camera, world: &mut World, arc_blocks_manager: &Arc<BlocksManager>, world_path: &Path) {
+    pub fn generate_world(&mut self, camera: &Camera, world: &mut World, arc_blocks_manager: &Arc<BlocksManager>, world_path: &PathBuf) {
         let player_cx = (camera.position.x / CHUNK_W as f32).floor() as i32;
         let player_cz = (camera.position.z / CHUNK_D as f32).floor() as i32;
 

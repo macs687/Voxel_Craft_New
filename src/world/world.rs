@@ -180,7 +180,7 @@ impl World {
 
 
     /// Загружает чанк из данных, полученных из файла (временная функция, позже будет использоваться только для генерации чанков)
-    pub fn update_world(&mut self, player_cx: i32, player_cz: i32, request_tx: &Sender<ChunkRequest>, save_tx: &Sender<SaveRequest>, blocks_manager: &Arc<BlocksManager>, world_path: &Path) {
+    pub fn update_world(&mut self, player_cx: i32, player_cz: i32, request_tx: &Sender<ChunkRequest>, save_tx: &Sender<SaveRequest>, blocks_manager: &Arc<BlocksManager>, world_path: &PathBuf) {
         let mut required = HashSet::new();
 
         for dx in -RENDER_DIST..RENDER_DIST {
@@ -199,7 +199,7 @@ impl World {
             if let Some(chunk) = self.chunks.remove(coord) {   // забираем чанк из HashMap
                 if chunk.modified {
                     let request = SaveRequest {
-                        world_path: world_path.to_path_buf(),
+                        world_path: world_path.clone(),
                         coord: *coord,
                         chunk,   // передаём владение
                     };
